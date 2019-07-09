@@ -1,7 +1,7 @@
 import Validation from '../dist/Validation';
 
 describe('Validation', () => {
-  describe('simple usage', () => {
+  describe('Simple usage', () => {
     test.each`
       point                   | ok
       ${{ x: 3420, y: 982 }}  | ${true}
