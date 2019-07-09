@@ -2,8 +2,12 @@
   "name": "model.validation",
   "version": "1.0.0",
   "description": "A universal client and server side data model validation.",
-  "main": "index.js",
+  "main": "dist/Validation.js",
+  "types": "dist/Validation.d.ts",
   "scripts": {
+    "tsc": "tsc",
+    "build": "rimraf dist && tsc",
+    "prepublish": "npm run build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -17,6 +21,7 @@
   "author": "Hessamoddin A Shokravi <ahs502@gmail.com>",
   "license": "ISC",
   "devDependencies": {
+    "rimraf": "^2.6.3",
     "typescript": "^3.5.3"
   }
 }
