@@ -83,7 +83,7 @@ export default class Validator<K extends string, D extends {} = {}> {
       }
     };
   }
-  array<A extends any = any>(target: A): { each(task: (item: A extends (infer T)[] ? T : any, index: number) => void): Validator<K, D> } {
+  array<A extends any = any>(target: A): { each(task: (item: A extends readonly (infer T)[] ? T : any, index: number) => void): Validator<K, D> } {
     const validator = this;
     if (target && Array.isArray(target))
       return {
