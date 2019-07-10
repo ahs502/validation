@@ -5,16 +5,12 @@ export default class Validator<K extends string, D extends {} = {}> {
   readonly data: D;
   private readonly validation: Validation<K, D>;
   private readonly blackhole: this;
-  private target: any;
-  private path: (string | number)[];
 
   constructor(validation: Validation<K, D>) {
     const me = this;
     this.data = validation.data;
     this.validation = validation;
     this.blackhole = new Proxy({}, { get: () => () => me.blackhole }) as this;
-    this.target = undefined;
-    this.path = [];
   }
 
   /**
@@ -34,7 +30,7 @@ export default class Validator<K extends string, D extends {} = {}> {
     this.validation.ok = false;
     return this.blackhole;
   }
-  if(...conditions: (boolean | (() => boolean))[]): this {
+  must(...conditions: (boolean | (() => boolean))[]): this {
     for (let i = 0; i < conditions.length; ++i) {
       const condition = conditions[i];
       if (typeof condition === 'function' ? !condition() : !condition) {
@@ -44,31 +40,12 @@ export default class Validator<K extends string, D extends {} = {}> {
     }
     return this;
   }
-
-  object(target: any): this {
-    this.target = target;
-    if (target && typeof target === 'object') return this;
-    this.validation.ok = false;
-    return this.blackhole;
-  }
-  do(task: (target: any) => void): this {
-    task(this.target);
+  if(...conditions: (boolean | (() => boolean))[]): this {
+    for (let i = 0; i < conditions.length; ++i) {
+      const condition = conditions[i];
+      if (typeof condition === 'function' ? !condition() : !condition) return this.blackhole;
+    }
     return this;
-  }
-  array(target: any): this {
-    this.target = target;
-    if (target && Array.isArray(target)) return this;
-    this.validation.ok = false;
-    return this.blackhole;
-  }
-  for(task: (item: any, index: number) => void): this {
-    (this.target as any[]).forEach(task);
-    return this;
-  }
-  optional(target: any): this {
-    this.target = target;
-    if (target) return this;
-    return this.blackhole;
   }
 
   check(badge: Badge<K>, validity: boolean | (() => boolean)): this {
@@ -80,27 +57,69 @@ export default class Validator<K extends string, D extends {} = {}> {
     this.validation.failedBadges.push(badge);
     return this.blackhole;
   }
-  also(badge: Badge<K>): this {
+  earn(badge: Badge<K>): this {
     this.validation.badges.push(badge);
     return this;
   }
-  in(...path: (string | number)[]): this {
-    this.path = path;
+  fail(badge: Badge<K>): this {
+    this.validation.ok = false;
+    this.validation.failedBadges.push(badge);
     return this;
   }
-  set(validation: Validation<any> | (() => Validation<any>)): this {
-    const validationObject = typeof validation === 'function' ? validation() : validation;
-    let data = this.validation.data as any;
-    this.path.slice(0, -1).forEach((property, index) => {
-      if (!data[property]) {
-        const nextProperty = this.path[index + 1];
-        data[property] = typeof nextProperty === 'number' ? [] : {};
-      }
-      data = data[property];
-    });
-    data[this.path[this.path.length - 1]] = validationObject;
-    if (validationObject.ok) return this;
+
+  object<T extends any = any>(target: T): { do(task: (target: T) => void): Validator<K, D> } {
+    const validator = this;
+    if (target && typeof target === 'object' && !Array.isArray(target))
+      return {
+        do(task: (target: T) => void) {
+          task(target);
+          return validator;
+        }
+      };
     this.validation.ok = false;
-    return this.blackhole;
+    return {
+      do(task: (target: T) => void) {
+        return validator.blackhole;
+      }
+    };
+  }
+  array<A extends any = any>(target: A): { each(task: (item: A extends (infer T)[] ? T : any, index: number) => void): Validator<K, D> } {
+    const validator = this;
+    if (target && Array.isArray(target))
+      return {
+        each(task: (item: any, index: number) => void) {
+          target.forEach(task);
+          return validator;
+        }
+      };
+    this.validation.ok = false;
+    return {
+      each(task: (item: any, index: number) => void) {
+        return validator.blackhole;
+      }
+    };
+  }
+
+  into(...path: (string | number)[]) {
+    if (path.length === 0) throw 'The path can not be empty.';
+    if (typeof path[0] !== 'string') throw 'The first argument in the path should be a string.';
+    const validator = this;
+    return {
+      set(validation: Validation<any> | (() => Validation<any>)): Validator<K, D> {
+        const validationInstance = typeof validation === 'function' ? validation() : validation;
+        let data = validator.validation.data as any;
+        path.slice(0, -1).forEach((property, index) => {
+          if (!data[property]) {
+            const nextProperty = path[index + 1];
+            data[property] = typeof nextProperty === 'number' ? [] : {};
+          }
+          data = data[property];
+        });
+        data[path[path.length - 1]] = validationInstance;
+        if (validationInstance.ok) return validator;
+        validator.validation.ok = false;
+        return validator.blackhole;
+      }
+    };
   }
 }
