@@ -1,35 +1,24 @@
-import { Message, Badge } from './Badge';
+import Badge, { Message, BadgeFailureMessages } from './Badge';
 import Validator from './Validator';
-
-const commonBadgeFailureMessages: readonly { postfix: string; message: Message }[] = [
-  { postfix: 'EXISTS', message: 'Required.' },
-  { postfix: 'IS_VALID', message: 'Invalid.' },
-  { postfix: 'IS_NOT_NEGATIVE', message: 'Should not be negative.' }
-];
-function getBadgeFailureMessage<K extends string>(badge: Badge<K>, dictionary: { readonly [badge in K]?: Message }): Message {
-  if (typeof badge === 'object') return badge.message;
-  if (badge in dictionary) return dictionary[badge]!;
-  const commonBadgeFailureMessage = commonBadgeFailureMessages.find(c => badge.endsWith(c.postfix));
-  if (commonBadgeFailureMessage) return commonBadgeFailureMessage.message;
-  return `Failed @ ${badge}`;
-}
 
 export default class Validation<K extends string, D extends {} = {}> {
   ok: boolean;
   readonly data: D;
   readonly badges: Badge<K>[];
   readonly failedBadges: Badge<K>[];
-  private readonly badgeFailureMessagesDictionary: { readonly [badge in K]?: Message };
+  private readonly badgeFailureMessages: BadgeFailureMessages;
 
-  protected constructor(validation: (validator: Validator<K, D>) => void, badgeFailureMessagesDictionary: { readonly [badge in K]?: Message } = {}) {
+  protected constructor(validation: (validator: Validator<K, D>) => void, badgeFailureMessages: BadgeFailureMessages = {}) {
     this.ok = true;
     this.data = {} as D;
     this.badges = [];
     this.failedBadges = [];
-    this.badgeFailureMessagesDictionary = badgeFailureMessagesDictionary;
+    this.badgeFailureMessages = badgeFailureMessages;
 
     validation(new Validator(this));
   }
+
+  static defaultBadgeFailureMessages: BadgeFailureMessages = {};
 
   /**
    * Traverses through all validations inside this.data structure.
@@ -73,19 +62,46 @@ export default class Validation<K extends string, D extends {} = {}> {
           return badges.some(badge => (badge.endsWith('*') ? bb.startsWith(badge.slice(0, -1)) : bb === badge));
         })
       : this.failedBadges;
-    return failedBadges.map(b => getBadgeFailureMessage(b, this.badgeFailureMessagesDictionary)).filter(Boolean);
+    return failedBadges
+      .map(b => {
+        if (typeof b === 'object') return b.message;
+        const badgeGlobs = Object.keys(this.badgeFailureMessages);
+        for (let i = 0; i < badgeGlobs.length; ++i) {
+          const badgeGlob = badgeGlobs[i];
+          if (
+            badgeGlob === b ||
+            (badgeGlob.startsWith('*') && b.endsWith(badgeGlob.slice(1))) ||
+            (badgeGlob.endsWith('*') && b.startsWith(badgeGlob.slice(0, -1)))
+          )
+            return this.badgeFailureMessages[badgeGlob];
+        }
+        const defaultBadgeGlobs = Object.keys(Validation.defaultBadgeFailureMessages);
+        for (let i = 0; i < defaultBadgeGlobs.length; ++i) {
+          const defaultBadgeGlob = defaultBadgeGlobs[i];
+          if (
+            defaultBadgeGlob === b ||
+            (defaultBadgeGlob.startsWith('*') && b.endsWith(defaultBadgeGlob.slice(1))) ||
+            (defaultBadgeGlob.endsWith('*') && b.startsWith(defaultBadgeGlob.slice(0, -1)))
+          )
+            return Validation.defaultBadgeFailureMessages[defaultBadgeGlob];
+        }
+        return `Failed @ ${b}`;
+      })
+      .filter(Boolean);
   }
 
   /**
-   * Throws an unempty exception iff this validation does not passes deeply.
+   * Throws an exception iff this validation does not passes deeply.
+   * @param defaultMessage The default error message to be thrown iff
+   * the validation is not ok but there exists no messages on any failed badge.
    */
-  throwIfErrorsExist(): void {
+  throw(defaultMessage?: string): void {
     if (this.ok) return;
     let messages = this.errors();
     if (messages.length) throw messages[0];
     this.traverseData(validation => ((messages = validation.errors()), messages.length > 0));
     if (messages.length) throw messages[0];
-    throw 'Invalid API input arguments.';
+    throw defaultMessage || '';
   }
 }
 

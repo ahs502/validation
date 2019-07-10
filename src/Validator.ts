@@ -1,5 +1,5 @@
 import Validation from './Validation';
-import { Badge } from './Badge';
+import Badge from './Badge';
 
 export default class Validator<K extends string, D extends {} = {}> {
   readonly data: D;
@@ -67,34 +67,34 @@ export default class Validator<K extends string, D extends {} = {}> {
     return this;
   }
 
-  object<T extends any = any>(target: T): { do(task: (target: T) => void): Validator<K, D> } {
+  object<T extends any = any>(target: T) {
     const validator = this;
     if (target && typeof target === 'object' && !Array.isArray(target))
       return {
         do(task: (target: T) => void) {
           task(target);
-          return validator;
+          return validator as Validator<K, D>;
         }
       };
     this.validation.ok = false;
     return {
-      do(task: (target: T) => void) {
+      do() {
         return validator.blackhole;
       }
     };
   }
-  array<A extends any = any>(target: A): { each(task: (item: A extends readonly (infer T)[] ? T : any, index: number) => void): Validator<K, D> } {
+  array<A extends any = any>(target: A) {
     const validator = this;
     if (target && Array.isArray(target))
       return {
         each(task: (item: any, index: number) => void) {
           target.forEach(task);
-          return validator;
+          return validator as Validator<K, D>;
         }
       };
     this.validation.ok = false;
     return {
-      each(task: (item: any, index: number) => void) {
+      each() {
         return validator.blackhole;
       }
     };
