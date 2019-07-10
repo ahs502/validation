@@ -65,27 +65,22 @@ export default class Validation<K extends string, D extends {} = {}> {
     return failedBadges
       .map(b => {
         if (typeof b === 'object') return b.message;
-        const badgeGlobs = Object.keys(this.badgeFailureMessages);
-        for (let i = 0; i < badgeGlobs.length; ++i) {
-          const badgeGlob = badgeGlobs[i];
-          if (
-            badgeGlob === b ||
-            (badgeGlob.startsWith('*') && b.endsWith(badgeGlob.slice(1))) ||
-            (badgeGlob.endsWith('*') && b.startsWith(badgeGlob.slice(0, -1)))
-          )
-            return this.badgeFailureMessages[badgeGlob];
+        return tryToFindIn(b, this.badgeFailureMessages) || tryToFindIn(b, Validation.defaultBadgeFailureMessages) || `Failed @ ${b}`;
+
+        function tryToFindIn(badge: K, badgeFailureMessages: BadgeFailureMessages): string | undefined {
+          const badgeGlobs = Object.keys(badgeFailureMessages);
+          for (let i = 0; i < badgeGlobs.length; ++i) {
+            const badgeGlob = badgeGlobs[i];
+            if (
+              badgeGlob === badge ||
+              (badgeGlob.startsWith('*') && badge.endsWith(badgeGlob.slice(1))) ||
+              (badgeGlob.endsWith('*') && badge.startsWith(badgeGlob.slice(0, -1))) ||
+              badgeGlob === '*'
+            )
+              return badgeFailureMessages[badgeGlob];
+          }
+          return undefined;
         }
-        const defaultBadgeGlobs = Object.keys(Validation.defaultBadgeFailureMessages);
-        for (let i = 0; i < defaultBadgeGlobs.length; ++i) {
-          const defaultBadgeGlob = defaultBadgeGlobs[i];
-          if (
-            defaultBadgeGlob === b ||
-            (defaultBadgeGlob.startsWith('*') && b.endsWith(defaultBadgeGlob.slice(1))) ||
-            (defaultBadgeGlob.endsWith('*') && b.startsWith(defaultBadgeGlob.slice(0, -1)))
-          )
-            return Validation.defaultBadgeFailureMessages[defaultBadgeGlob];
-        }
-        return `Failed @ ${b}`;
       })
       .filter(Boolean);
   }

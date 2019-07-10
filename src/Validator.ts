@@ -47,6 +47,10 @@ export default class Validator<K extends string, D extends {} = {}> {
     }
     return this;
   }
+  then(task: () => void): this {
+    task();
+    return this;
+  }
 
   check(badge: Badge<K>, validity: boolean | (() => boolean)): this {
     if (typeof validity === 'function' ? validity() : validity) {
