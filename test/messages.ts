@@ -8,12 +8,18 @@ describe('Validation', () => {
     }
 
     test.each`
-      student                        | ok       | failedBadges                                  | errorMessages
-      ${{ name: 'Hessam', age: 33 }} | ${true}  | ${[]}                                         | ${[]}
-      ${{ name: 'H', age: 33 }}      | ${false} | ${[]}                                         | ${['Name needs at least 2 more characters.']}
-      ${{ name: 'H', age: 33 }}      | ${false} | ${['NAME_STARTS_WITH_CAPITAL', 'AGE_EXISTS']} | ${[]}
-      ${{ name: 'he', age: 33 }}     | ${false} | ${[]}                                         | ${['Name needs at least 1 more characters.', 'Name should start with a capital letter.']}
-    `('glob like patterns for default messages', ({ student, ok, failedBadges, errorMessages }) => {
+      student                               | ok       | failedBadges                                  | errorMessages
+      ${{ name: 'Hessam', age: 33 }}        | ${true}  | ${[]}                                         | ${[]}
+      ${{ name: 'H', age: 33 }}             | ${false} | ${[]}                                         | ${['Name needs at least 2 more characters.']}
+      ${{ name: 'H', age: 33 }}             | ${false} | ${['NAME_STARTS_WITH_CAPITAL', 'AGE_EXISTS']} | ${[]}
+      ${{ name: 'he', age: 33 }}            | ${false} | ${[]}                                         | ${['Name needs at least 1 more characters.', 'Name should start with a capital letter.']}
+      ${{ name: true, age: 33 }}            | ${false} | ${['NAME_IS_STRING']}                         | ${['Student data is invalid.']}
+      ${{ name: 'Hessam', age: undefined }} | ${false} | ${['AGE_EXISTS']}                             | ${['This field is required.']}
+      ${{ name: 'Hessam', age: NaN }}       | ${false} | ${['AGE_IS_VALID']}                           | ${['Age has some problem.']}
+      ${null}                               | ${false} | ${[]}                                         | ${[]}
+      ${123}                                | ${false} | ${[]}                                         | ${[]}
+      ${[123]}                              | ${false} | ${[]}                                         | ${[]}
+    `('validating student $student to $ok', ({ student, ok, failedBadges, errorMessages }) => {
       class StudentValidation extends Validation<
         | 'NAME_EXISTS'
         | 'NAME_IS_STRING'
@@ -44,7 +50,7 @@ describe('Validation', () => {
                       .check('NAME_STARTS_WITH_CAPITAL', () => /^[A-Z]$/.test(name[0]));
                   });
                 validator
-                  .check('AGE_EXISTS', !!age || age === 0 || isNaN(age))
+                  .check('AGE_EXISTS', !!age || typeof age === 'number')
                   .check('AGE_IS_NUMBER', () => typeof age === 'number')
                   .check('AGE_IS_VALID', () => !isNaN(age))
                   .check('AGE_IS_POSITIVE', () => age > 0)
@@ -54,7 +60,7 @@ describe('Validation', () => {
                   });
               }),
             {
-              '*_EXSISTS': 'This field is required.',
+              '*_EXISTS': 'This field is required.',
               NAME_ONLY_CONTAINS_LETTERS: 'Name can only have letters or spaces.',
               NAME_STARTS_WITH_CAPITAL: 'Name should start with a capital letter.',
               AGE_IS_POSITIVE: 'Age should be positive.',
