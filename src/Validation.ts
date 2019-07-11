@@ -3,14 +3,14 @@ import Validator from './Validator';
 
 export default class Validation<K extends string, D extends {} = {}> {
   ok: boolean;
-  readonly data: D;
+  readonly $: D;
   readonly badges: Badge<K>[];
   readonly failedBadges: Badge<K>[];
   private readonly badgeFailureMessages: BadgeFailureMessages;
 
   protected constructor(validation: (validator: Validator<K, D>) => void, badgeFailureMessages: BadgeFailureMessages = {}) {
     this.ok = true;
-    this.data = {} as D;
+    this.$ = {} as D;
     this.badges = [];
     this.failedBadges = [];
     this.badgeFailureMessages = badgeFailureMessages;
@@ -21,10 +21,10 @@ export default class Validation<K extends string, D extends {} = {}> {
   static defaultBadgeFailureMessages: BadgeFailureMessages = {};
 
   /**
-   * Traverses through all validations inside this.data structure.
+   * Traverses through all validations inside this.$ structure.
    * @param task The task to be applied to all validations, should return true to break traversing.
    */
-  private traverseData(task: (validation: Validation<any>) => boolean): void {
+  private traverse(task: (validation: Validation<any>) => boolean): void {
     (function traverseItem(item: any): boolean {
       if (!item) return false;
       if (item instanceof Validation) return task(item);
@@ -38,7 +38,7 @@ export default class Validation<K extends string, D extends {} = {}> {
         }
       }
       return false;
-    })(this.data);
+    })(this.$);
   }
 
   /**
@@ -58,9 +58,9 @@ export default class Validation<K extends string, D extends {} = {}> {
   errors(...badges: (K | string)[]): readonly Message[] {
     const failedBadges = badges.length
       ? this.failedBadges.filter(b => {
-          const bb = typeof b === 'string' ? b : b.badge;
-          return badges.some(badge => (badge.endsWith('*') ? bb.startsWith(badge.slice(0, -1)) : bb === badge));
-        })
+        const bb = typeof b === 'string' ? b : b.badge;
+        return badges.some(badge => (badge.endsWith('*') ? bb.startsWith(badge.slice(0, -1)) : bb === badge));
+      })
       : this.failedBadges;
     return failedBadges
       .map(b => {
@@ -94,7 +94,7 @@ export default class Validation<K extends string, D extends {} = {}> {
     if (this.ok) return;
     let messages = this.errors();
     if (messages.length) throw messages[0];
-    this.traverseData(validation => ((messages = validation.errors()), messages.length > 0));
+    this.traverse(validation => ((messages = validation.errors()), messages.length > 0));
     if (messages.length) throw messages[0];
     throw defaultMessage || '';
   }
@@ -163,7 +163,7 @@ export default class Validation<K extends string, D extends {} = {}> {
 //               .in('aa', i)
 //               .set(() => new AValidation(a))
 //           )
-//           .if(() => validator.data.aa.every(v => v.has('XPOSITIVE')))
+//           .if(() => validator.$.aa.every(v => v.has('XPOSITIVE')))
 //           .check({ badge: 'ZMORETHANAAXONLY', message: 'Invalid.' }, () => aa.every(a => z > a.x));
 //         validator.object(o).do(({ oa, oaa }) => {
 //           validator
@@ -182,7 +182,7 @@ export default class Validation<K extends string, D extends {} = {}> {
 //                 .in('o', 'oaa', i)
 //                 .set(() => new AValidation(a))
 //             )
-//             .if(() => validator.data.o.oaa.filter(Boolean).every(v => v!.has('XPOSITIVE')))
+//             .if(() => validator.$.o.oaa.filter(Boolean).every(v => v!.has('XPOSITIVE')))
 //             .check({ badge: 'ZMORETHANOAAXONLY', message: 'Invalid.' }, () => oaa.every(a => z > a.x));
 //         });
 //       })
@@ -204,6 +204,6 @@ export default class Validation<K extends string, D extends {} = {}> {
 
 // const b: any = {};
 // const bValidation = new BValidation(b);
-// bValidation.data.o.oaa[3]!.has('XPOSITIVE');
+// bValidation.$.o.oaa[3]!.has('XPOSITIVE');
 
 // /////////////////////////////////////////////////////////////

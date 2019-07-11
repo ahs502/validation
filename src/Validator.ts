@@ -2,13 +2,13 @@ import Validation from './Validation';
 import Badge from './Badge';
 
 export default class Validator<K extends string, D extends {} = {}> {
-  readonly data: D;
+  readonly $: D;
   private readonly validation: Validation<K, D>;
   private readonly blackhole: this;
 
   constructor(validation: Validation<K, D>) {
     const me = this;
-    this.data = validation.data;
+    this.$ = validation.$;
     this.validation = validation;
     this.blackhole = new Proxy({}, { get: () => () => me.blackhole }) as this;
   }
@@ -111,15 +111,15 @@ export default class Validator<K extends string, D extends {} = {}> {
     return {
       set(validation: Validation<any> | (() => Validation<any>)): Validator<K, D> {
         const validationInstance = typeof validation === 'function' ? validation() : validation;
-        let data = validator.validation.data as any;
+        let $ = validator.validation.$ as any;
         path.slice(0, -1).forEach((property, index) => {
-          if (!data[property]) {
+          if (!$[property]) {
             const nextProperty = path[index + 1];
-            data[property] = typeof nextProperty === 'number' ? [] : {};
+            $[property] = typeof nextProperty === 'number' ? [] : {};
           }
-          data = data[property];
+          $ = $[property];
         });
-        data[path[path.length - 1]] = validationInstance;
+        $[path[path.length - 1]] = validationInstance;
         if (validationInstance.ok) return validator;
         validator.validation.ok = false;
         return validator.blackhole;

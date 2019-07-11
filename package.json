@@ -6,11 +6,10 @@
   "types": "dist/Validation.d.ts",
   "private": false,
   "scripts": {
-    "tsc": "tsc",
-    "build": "rimraf dist && tsc",
+    "build": "rimraf dist/* && tsc",
     "prepublish": "npm test",
-    "test": "npm run build && npm run test-only",
-    "test-only": "jest --config jestconfig.json"
+    "test": "jest --config jestconfig.json",
+    "tsc": "tsc"
   },
   "repository": {
     "type": "git",

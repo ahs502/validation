@@ -1,4 +1,4 @@
-import Validation from '../dist/Validation';
+import Validation from '../src/Validation';
 
 describe('Validation', () => {
   describe('Simple usage', () => {
