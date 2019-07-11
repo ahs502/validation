@@ -7,7 +7,7 @@
   "private": false,
   "scripts": {
     "build": "rimraf dist/* && tsc",
-    "prepublish": "npm test && npm run build",
+    "prepare": "npm test && npm run build",
     "test": "jest --config jestconfig.json",
     "tsc": "tsc"
   },
