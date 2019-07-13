@@ -51,38 +51,38 @@ export default class Validation<K extends string, D extends {} = {}> {
 
   /**
    * Returns the list of all error messages of this validation,
-   * with respect to the given badges or badge prefixes if provided.
-   * @param badges Optional, the badges or badge prefixes which the method is going to
-   * return messages for. Badge prefixes end with a '*' character.
+   * with respect to the given badges or badge globs if provided.
+   * @param badges Optional, the badges or badge globs which the method is going to
+   * return messages for. It can be a badge name, a * character followed by a badge postfix,
+   * a badge prefix followed by a * character or a * character alone (default, all badges)
    */
   errors(...badges: (K | string)[]): readonly Message[] {
-    const failedBadges = badges.length
+    return (badges.length
       ? this.failedBadges.filter(b => {
-        const bb = typeof b === 'string' ? b : b.badge;
-        return badges.some(badge => (badge.endsWith('*') ? bb.startsWith(badge.slice(0, -1)) : bb === badge));
-      })
-      : this.failedBadges;
-    return failedBadges
+          const bb = typeof b === 'string' ? b : b.badge;
+          return badges.some(badge => matchBadgeGlob(bb, badge));
+        })
+      : this.failedBadges
+    )
       .map(b => {
         if (typeof b === 'object') return b.message;
         return tryToFindIn(b, this.badgeFailureMessages) || tryToFindIn(b, Validation.defaultBadgeFailureMessages) || `Failed @ ${b}`;
-
-        function tryToFindIn(badge: K, badgeFailureMessages: BadgeFailureMessages): string | undefined {
-          const badgeGlobs = Object.keys(badgeFailureMessages);
-          for (let i = 0; i < badgeGlobs.length; ++i) {
-            const badgeGlob = badgeGlobs[i];
-            if (
-              badgeGlob === badge ||
-              (badgeGlob.startsWith('*') && badge.endsWith(badgeGlob.slice(1))) ||
-              (badgeGlob.endsWith('*') && badge.startsWith(badgeGlob.slice(0, -1))) ||
-              badgeGlob === '*'
-            )
-              return badgeFailureMessages[badgeGlob];
-          }
-          return undefined;
-        }
       })
       .filter(Boolean);
+
+    function matchBadgeGlob(badge: string, badgeGlob: string): boolean {
+      return (
+        badgeGlob === badge ||
+        (badgeGlob.startsWith('*') && badge.endsWith(badgeGlob.slice(1))) ||
+        (badgeGlob.endsWith('*') && badge.startsWith(badgeGlob.slice(0, -1))) ||
+        badgeGlob === '*'
+      );
+    }
+    function tryToFindIn(badge: K, badgeFailureMessages: BadgeFailureMessages): string | undefined {
+      const badgeGlobs = Object.keys(badgeFailureMessages);
+      for (let i = 0; i < badgeGlobs.length; ++i) if (matchBadgeGlob(badge, badgeGlobs[i])) return badgeFailureMessages[badgeGlobs[i]];
+      return undefined;
+    }
   }
 
   /**
