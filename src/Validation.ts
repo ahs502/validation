@@ -8,14 +8,14 @@ export default class Validation<K extends string, D extends {} = {}> {
   readonly failedBadges: Badge<K>[];
   private readonly badgeFailureMessages: BadgeFailureMessages;
 
-  protected constructor(validation: (validator: Validator<K, D>) => void, badgeFailureMessages: BadgeFailureMessages = {}) {
+  protected constructor(validation: (validator: Validator<K, D>, validation: Validation<K, D>) => void, badgeFailureMessages: BadgeFailureMessages = {}) {
     this.ok = true;
     this.$ = {} as D;
     this.badges = [];
     this.failedBadges = [];
     this.badgeFailureMessages = badgeFailureMessages;
 
-    validation(new Validator(this));
+    validation(new Validator(this), this);
   }
 
   static defaultBadgeFailureMessages: BadgeFailureMessages = {};

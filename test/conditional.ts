@@ -35,7 +35,7 @@ describe('Validation', () => {
       | 'MOTHER_IS_MY_PARENT'
     > {
       constructor(childInfo: ChildInfo, name: string, persons: readonly Person[]) {
-        super(validator =>
+        super((validator, validation) =>
           validator.object(childInfo).do(({ fatherName, motherName }) => {
             validator
               .if(!fatherName, !motherName)
@@ -64,7 +64,7 @@ describe('Validation', () => {
                       .check('MOTHER_IS_MY_PARENT', () => (parent!.info as ParentInfo).childrenNames.includes(name));
                   });
               })
-              .if(validator.has('FATHER_IS_MY_PARENT') || validator.has('MOTHER_IS_MY_PARENT'))
+              .if(validation.has('FATHER_IS_MY_PARENT') || validation.has('MOTHER_IS_MY_PARENT'))
               .earn('PARENTS_ARE_AVAILABLE')
               .else()
               .fail('PARENTS_ARE_AVAILABLE');

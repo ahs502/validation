@@ -26,7 +26,7 @@ describe('Validation', () => {
       { readonly points: readonly PointValidation[] }
     > {
       constructor(path: Path) {
-        super(validator =>
+        super((validator, validation) =>
           validator.object(path).do(({ length, points }) => {
             validator
               .check('LENGTH_EXISTS', !!length || typeof length === 'number')
@@ -35,7 +35,7 @@ describe('Validation', () => {
             validator.array(points).each((point, index) => validator.into('points', index).set(new PointValidation(point)));
             validator
               .when('LENGTH_IS_VALID')
-              .must(validator.$.points.every(v => v.ok))
+              .must(validation.$.points.every(v => v.ok))
               .check('LENGTH_EQUALS_NUMBER_OF_POINTS', () => length === points.length);
           })
         );

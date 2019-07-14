@@ -2,20 +2,17 @@ import Validation from './Validation';
 import Badge from './Badge';
 
 export default class Validator<K extends string, D extends {} = {}> {
-  readonly $: D;
   private readonly validation: Validation<K, D>;
   private readonly blackhole: this;
 
   constructor(validation: Validation<K, D>) {
-    this.$ = validation.$;
-    this.validation = validation;
-
     const me = this;
+    this.validation = validation;
     this.blackhole = new Proxy(
       {},
       {
-        get: (target, p, receiver) => {
-          if (p === 'else')
+        get: (target, property, receiver) => {
+          if (property === 'else')
             return (task?: () => void) => {
               task && task();
               return me;
@@ -27,19 +24,11 @@ export default class Validator<K extends string, D extends {} = {}> {
   }
 
   /**
-   * Returns true iff this validation satisfies all the given badges.
-   * @param badges The badges to be checked.
-   */
-  has(...badges: K[]): boolean {
-    return this.validation.has(...badges);
-  }
-
-  /**
    * Blocks a validation chain iff this validation does not satisfy some of the given badges.
    * @param requiredBadges Badges or badge arrays.
    */
   when(...requiredBadges: (K | K[])[]): this {
-    if (!requiredBadges.some(b => !(Array.isArray(b) ? this.has(...b) : this.has(b)))) return this;
+    if (!requiredBadges.some(b => !(Array.isArray(b) ? this.validation.has(...b) : this.validation.has(b)))) return this;
     this.validation.ok = false;
     return this.blackhole;
   }
@@ -61,6 +50,7 @@ export default class Validator<K extends string, D extends {} = {}> {
     return this;
   }
   else(task?: () => void): this {
+    // Just bypass task by definition!
     return this.blackhole;
   }
   then(task: () => void): this {
@@ -149,4 +139,6 @@ export default class Validator<K extends string, D extends {} = {}> {
       $[path[path.length - 1]] = value;
     }
   }
+
+  // await(promise: Promise<any> | (() => Promise<any>)): this {}
 }
