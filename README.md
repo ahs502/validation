@@ -14,6 +14,7 @@ Have you ever think about implementing validation on your data model *once* and 
 If the answer is ***yes***, then `@ahs502/validation` system is here to save the day!
 
 + Both **TypeScript** and **JavaScript** support
++ No rules, no conventions, just **plain JavaScript expressions to check things**
 
 ```typescript
 import Validation from '@ahs502/validation'
@@ -101,8 +102,6 @@ if (pathValidation.ok) {
   });
 }
 ```
-
-Just give it a try, you'll like it!
 
 ## Installation
 

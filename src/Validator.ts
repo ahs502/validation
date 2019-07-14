@@ -7,10 +7,23 @@ export default class Validator<K extends string, D extends {} = {}> {
   private readonly blackhole: this;
 
   constructor(validation: Validation<K, D>) {
-    const me = this;
     this.$ = validation.$;
     this.validation = validation;
-    this.blackhole = new Proxy({}, { get: () => () => me.blackhole }) as this;
+
+    const me = this;
+    this.blackhole = new Proxy(
+      {},
+      {
+        get: (target, p, receiver) => {
+          if (p === 'else')
+            return (task?: () => void) => {
+              task && task();
+              return me;
+            };
+          return () => me.blackhole;
+        }
+      }
+    ) as this;
   }
 
   /**
@@ -46,6 +59,9 @@ export default class Validator<K extends string, D extends {} = {}> {
       if (typeof condition === 'function' ? !condition() : !condition) return this.blackhole;
     }
     return this;
+  }
+  else(task?: () => void): this {
+    return this.blackhole;
   }
   then(task: () => void): this {
     task();
@@ -91,7 +107,7 @@ export default class Validator<K extends string, D extends {} = {}> {
     const validator = this;
     if (target && Array.isArray(target))
       return {
-        each(task: (item: any, index: number) => void) {
+        each(task: (item: A extends readonly (infer T)[] ? T : any, index: number) => void) {
           target.forEach(task);
           return validator as Validator<K, D>;
         }
@@ -104,26 +120,33 @@ export default class Validator<K extends string, D extends {} = {}> {
     };
   }
 
-  into(...path: (string | number)[]) {
-    if (path.length === 0) throw 'The path can not be empty.';
-    if (typeof path[0] !== 'string') throw 'The first argument in the path should be a string.';
+  into(root: keyof D, ...path: (string | number)[]) {
+    path.unshift(root as string | number); //TODO: Consider symbols here too.
     const validator = this;
     return {
       set(validation: Validation<any> | (() => Validation<any>)): Validator<K, D> {
         const validationInstance = typeof validation === 'function' ? validation() : validation;
-        let $ = validator.validation.$ as any;
-        path.slice(0, -1).forEach((property, index) => {
-          if (!$[property]) {
-            const nextProperty = path[index + 1];
-            $[property] = typeof nextProperty === 'number' ? [] : {};
-          }
-          $ = $[property];
-        });
-        $[path[path.length - 1]] = validationInstance;
+        set$(validationInstance);
         if (validationInstance.ok) return validator;
         validator.validation.ok = false;
         return validator.blackhole;
+      },
+      put(value: any | (() => any)): Validator<K, D> {
+        set$(typeof value === 'function' ? value() : value);
+        return validator;
       }
     };
+
+    function set$(value: any) {
+      let $ = validator.validation.$ as any;
+      path.slice(0, -1).forEach((property, index) => {
+        if (!$[property]) {
+          const nextProperty = path[index + 1];
+          $[property] = typeof nextProperty === 'number' ? [] : {};
+        }
+        $ = $[property];
+      });
+      $[path[path.length - 1]] = value;
+    }
   }
 }
