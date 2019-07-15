@@ -9,12 +9,15 @@ Have you ever tried to validate each part of your data from *different aspects* 
 
 Did you have a hard time to implement *cross field validation* or *sequential/conditional checks* on your data?
 
-Have you ever think about implementing validation on your data model *once* and use it *both* within the *client side* and the *server side* code?
+Have you ever thought about implementing validation on your data model *once* and use it *both* within the *client side* and the *server side* code?
+
+Are you tired from those stupid rule definitions and wish to be able to apply all sorts of custom checks on your data directly by JavaScript expressions?
 
 If the answer is ***yes***, then `@ahs502/validation` system is here to save the day!
 
 + Both **TypeScript** and **JavaScript** support
 + No rules, no conventions, just **plain JavaScript expressions to check things**
++ Support for **asynchronous** validations as well as **synchronous** validations
 
 ```typescript
 import Validation from '@ahs502/validation'

@@ -6,16 +6,22 @@ export default class Validation<K extends string, D extends {} = {}> {
   readonly $: D;
   readonly badges: Badge<K>[];
   readonly failedBadges: Badge<K>[];
+  readonly async: Promise<any>;
+
   private readonly badgeFailureMessages: BadgeFailureMessages;
 
-  protected constructor(validation: (validator: Validator<K, D>, validation: Validation<K, D>) => void, badgeFailureMessages: BadgeFailureMessages = {}) {
+  protected constructor(validate: (validator: Validator<K, D>, validation: Validation<K, D>) => void, badgeFailureMessages: BadgeFailureMessages = {}) {
     this.ok = true;
     this.$ = {} as D;
     this.badges = [];
     this.failedBadges = [];
-    this.badgeFailureMessages = badgeFailureMessages;
 
-    validation(new Validator(this), this);
+    let asyncSetup: (resolve: (value?: any) => void, reject: (reason?: any) => void) => void;
+    const validator = new Validator(this, providedAsyncSetup => (asyncSetup = providedAsyncSetup));
+    validate(validator, this);
+    this.async = new Promise(asyncSetup!);
+
+    this.badgeFailureMessages = badgeFailureMessages;
   }
 
   static defaultBadgeFailureMessages: BadgeFailureMessages = {};

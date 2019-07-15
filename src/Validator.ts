@@ -1,17 +1,33 @@
 import Validation from './Validation';
 import Badge from './Badge';
 
+interface AsyncHandler {
+  promise: Promise<any>;
+  chain: {
+    method: string;
+    args: any[];
+  }[];
+}
+
 export default class Validator<K extends string, D extends {} = {}> {
   private readonly validation: Validation<K, D>;
   private readonly blackhole: this;
+  private readonly asyncHandlers: AsyncHandler[];
+  private asyncDone: boolean;
+  private asyncResolve!: (value?: any) => void;
+  private asyncReject!: (reason?: any) => void;
 
-  constructor(validation: Validation<K, D>) {
+  constructor(
+    validation: Validation<K, D>,
+    consumeAsyncSetup: (providedAsyncSetup: (resolve: (value?: any) => void, reject: (reason?: any) => void) => void) => void
+  ) {
     const me = this;
     this.validation = validation;
     this.blackhole = new Proxy(
       {},
       {
         get: (target, property, receiver) => {
+          if (property === 'end') return () => undefined;
           if (property === 'else')
             return (task?: () => void) => {
               task && task();
@@ -21,6 +37,15 @@ export default class Validator<K extends string, D extends {} = {}> {
         }
       }
     ) as this;
+    this.asyncHandlers = [];
+    this.asyncDone = false;
+    consumeAsyncSetup((resolve, reject) => {
+      this.asyncResolve = resolve;
+      this.asyncReject = reject;
+      if (this.asyncHandlers.length) return;
+      this.asyncDone = true;
+      this.asyncResolve();
+    });
   }
 
   /**
@@ -140,5 +165,46 @@ export default class Validator<K extends string, D extends {} = {}> {
     }
   }
 
-  // await(promise: Promise<any> | (() => Promise<any>)): this {}
+  await(promise: Promise<any> | (() => Promise<any>)): this {
+    const asyncHandler: AsyncHandler = {
+      promise: (typeof promise === 'function' ? promise() : promise)
+        .then(() => {
+          if (this.asyncDone) return;
+          let validator = this as any;
+          asyncHandler.chain.forEach(ring => (validator = validator[ring.method](...ring.args)));
+          this.asyncHandlers.splice(this.asyncHandlers.indexOf(asyncHandler), 1);
+          if (this.asyncHandlers.length) return;
+          this.asyncDone = true;
+          this.asyncResolve();
+        })
+        .catch(reason => {
+          this.validation.ok = false;
+          if (this.asyncDone) return;
+          this.asyncDone = true;
+          this.asyncReject(reason);
+        }),
+      chain: []
+    };
+    this.asyncHandlers.push(asyncHandler);
+    const chainRedirector = new Proxy(
+      {},
+      {
+        get: (target, property, receiver) => {
+          if (property === 'end') return () => undefined;
+          return (...args: any[]) => {
+            asyncHandler.chain.push({
+              method: String(property),
+              args
+            });
+            return chainRedirector;
+          };
+        }
+      }
+    ) as this;
+    return chainRedirector;
+  }
+
+  end(): undefined {
+    return undefined;
+  }
 }
