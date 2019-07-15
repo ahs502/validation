@@ -60,7 +60,7 @@ class PathValidation extends Validation<
   { points: PointValidation[] }
 > {
   constructor(path: Path, range: number) {
-    super(validator =>
+    super((validator, validation) =>
       validator.object(path).do(({ points, closed }) => {
         validator
           .array(points)
@@ -71,7 +71,7 @@ class PathValidation extends Validation<
           );
         validator
           .check('CLOSED_IS_VALID', typeof closed === 'boolean')
-          .must(validator.$.points.every(pointValidation => pointValidation.ok))
+          .must(validation.$.points.every(pointValidation => pointValidation.ok))
           .then(() => {
             validator
               .if(closed)
@@ -128,7 +128,7 @@ $ npm install @ahs502/validation
 
 *~~Not documented yet!~~*
 
-## Example
+## Examples
 
 *~~Not documented yet!~~*
 
@@ -140,7 +140,7 @@ Run tests (Powered by *jest*):
 $ npm test
 ```
 
-Build the project to `dist` folder:
+Build the project into the `dist` folder:
 
 ```sh
 $ npm run build
@@ -152,5 +152,5 @@ $ npm run build
 
 The code is simple! It would be appreciated if you had any suggestions or contribution on it or detected any bug or issue.
 
-+ See the code on [GitHub @ahs502/validation](https://github.com/ahs502/validation)
-+ Contact me by [my gmail address](ahs502@gmail.com)  *(Hessamoddin A Shokravi)*
++ See the code on [GitHub](https://github.com/ahs502/validation)
++ Contact me by [my gmail](ahs502@gmail.com)  *(Hessamoddin A Shokravi)*
