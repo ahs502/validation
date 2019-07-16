@@ -1,5 +1,5 @@
 import Validation from './Validation';
-import Badge from './Badge';
+import { getBadgeMessage } from './utils';
 
 interface AsyncHandler {
   promise: Promise<any>;
@@ -9,8 +9,11 @@ interface AsyncHandler {
   }[];
 }
 
-export default class Validator<K extends string, D extends {} = {}> {
-  private readonly validation: Validation<K, D>;
+export default class Validator<Badge extends string, Structure extends {} = {}> {
+  private readonly validation: Validation<Badge, Structure>;
+  private readonly invalidate: () => void;
+  private readonly badges: Badge[];
+  private readonly errors: { [badge in Badge]?: string };
   private readonly blackhole: this;
   private readonly asyncHandlers: AsyncHandler[];
   private asyncDone: boolean;
@@ -18,11 +21,17 @@ export default class Validator<K extends string, D extends {} = {}> {
   private asyncReject!: (reason?: any) => void;
 
   constructor(
-    validation: Validation<K, D>,
+    validation: Validation<Badge, Structure>,
+    invalidate: () => void,
+    badges: Badge[],
+    errors: { [badge in Badge]?: string },
     consumeAsyncSetup: (providedAsyncSetup: (resolve: (value?: any) => void, reject: (reason?: any) => void) => void) => void
   ) {
     const me = this;
     this.validation = validation;
+    this.invalidate = invalidate;
+    this.badges = badges;
+    this.errors = errors;
     this.blackhole = new Proxy(
       {},
       {
@@ -52,16 +61,17 @@ export default class Validator<K extends string, D extends {} = {}> {
    * Blocks a validation chain iff this validation does not satisfy some of the given badges.
    * @param requiredBadges Badges or badge arrays.
    */
-  when(...requiredBadges: (K | K[])[]): this {
-    if (!requiredBadges.some(b => !(Array.isArray(b) ? this.validation.has(...b) : this.validation.has(b)))) return this;
-    this.validation.ok = false;
+  when(...requiredBadges: Badge[]): this {
+    if (requiredBadges.length === 0) return this;
+    if (this.validation.has(requiredBadges[0], ...requiredBadges.slice(1))) return this;
+    this.invalidate();
     return this.blackhole;
   }
   must(...conditions: (boolean | (() => boolean))[]): this {
     for (let i = 0; i < conditions.length; ++i) {
       const condition = conditions[i];
       if (typeof condition === 'function' ? !condition() : !condition) {
-        this.validation.ok = false;
+        this.invalidate();
         return this.blackhole;
       }
     }
@@ -83,22 +93,24 @@ export default class Validator<K extends string, D extends {} = {}> {
     return this;
   }
 
-  check(badge: Badge<K>, validity: boolean | (() => boolean)): this {
+  check(badge: Badge, validity: boolean | (() => boolean), message?: string): this {
     if (typeof validity === 'function' ? validity() : validity) {
-      this.validation.badges.push(badge);
+      this.badges.includes(badge) || this.badges.push(badge);
       return this;
     }
-    this.validation.ok = false;
-    this.validation.failedBadges.push(badge);
+    this.errors[badge] =
+      this.errors[badge] || message || getBadgeMessage(badge, this.validation.badgeFailureMessages, Validation.defaultBadgeFailureMessages) || '';
+    this.invalidate();
     return this.blackhole;
   }
-  earn(badge: Badge<K>): this {
-    this.validation.badges.push(badge);
+  earn(badge: Badge): this {
+    this.badges.includes(badge) || this.badges.push(badge);
     return this;
   }
-  fail(badge: Badge<K>): this {
-    this.validation.ok = false;
-    this.validation.failedBadges.push(badge);
+  fail(badge: Badge, message?: string): this {
+    this.errors[badge] =
+      this.errors[badge] || message || getBadgeMessage(badge, this.validation.badgeFailureMessages, Validation.defaultBadgeFailureMessages) || '';
+    this.invalidate();
     return this;
   }
 
@@ -108,10 +120,10 @@ export default class Validator<K extends string, D extends {} = {}> {
       return {
         do(task: (target: T) => void) {
           task(target);
-          return validator as Validator<K, D>;
+          return validator as Validator<Badge, Structure>;
         }
       };
-    this.validation.ok = false;
+    this.invalidate();
     return {
       do() {
         return validator.blackhole;
@@ -124,10 +136,10 @@ export default class Validator<K extends string, D extends {} = {}> {
       return {
         each(task: (item: A extends readonly (infer T)[] ? T : any, index: number) => void) {
           target.forEach(task);
-          return validator as Validator<K, D>;
+          return validator as Validator<Badge, Structure>;
         }
       };
-    this.validation.ok = false;
+    this.invalidate();
     return {
       each() {
         return validator.blackhole;
@@ -135,18 +147,18 @@ export default class Validator<K extends string, D extends {} = {}> {
     };
   }
 
-  into(root: keyof D, ...path: (string | number)[]) {
+  into(root: keyof Structure, ...path: (string | number)[]) {
     path.unshift(root as string | number); //TODO: Consider symbols here too.
     const validator = this;
     return {
-      set(validation: Validation<any> | (() => Validation<any>)): Validator<K, D> {
+      set(validation: Validation<any> | (() => Validation<any>)): Validator<Badge, Structure> {
         const validationInstance = typeof validation === 'function' ? validation() : validation;
         set$(validationInstance);
         if (validationInstance.ok) return validator;
-        validator.validation.ok = false;
+        validator.invalidate();
         return validator.blackhole;
       },
-      put(value: any | (() => any)): Validator<K, D> {
+      put(value: any | (() => any)): Validator<Badge, Structure> {
         set$(typeof value === 'function' ? value() : value);
         return validator;
       }
@@ -178,7 +190,7 @@ export default class Validator<K extends string, D extends {} = {}> {
           this.asyncResolve();
         })
         .catch(reason => {
-          this.validation.ok = false;
+          this.invalidate();
           if (this.asyncDone) return;
           this.asyncDone = true;
           this.asyncReject(reason);

@@ -30,8 +30,8 @@ describe('Validation', () => {
                 .check('NAME_IS_STRING', () => typeof name === 'string')
                 .then(() => {
                   validator
-                    .check({ badge: 'NAME_IS_NOT_TOO_SHORT', message: `Name needs at least ${3 - name.length} more characters.` }, name.length >= 3)
-                    .check({ badge: 'NAME_IS_NOT_TOO_LONG', message: `Name has at least ${name.length - 10} extra characters.` }, () => name.length <= 10);
+                    .check('NAME_IS_NOT_TOO_SHORT', name.length >= 3, `Name needs at least ${3 - name.length} more characters.`)
+                    .check('NAME_IS_NOT_TOO_LONG', () => name.length <= 10, `Name has at least ${name.length - 10} extra characters.`);
                   validator
                     .check('NAME_ONLY_CONTAINS_LETTERS', /^[a-zA-Z][a-zA-Z\s]*$/.test(name))
                     .check('NAME_STARTS_WITH_CAPITAL', () => /^[A-Z]$/.test(name[0]));
@@ -42,8 +42,8 @@ describe('Validation', () => {
                 .check('AGE_IS_VALID', () => !isNaN(age))
                 .check('AGE_IS_POSITIVE', () => age > 0)
                 .then(() => {
-                  validator.if(age < 7).fail({ badge: 'AGE_IS_HIGH_ENOUGH', message: `The ${age} years student is too young.` });
-                  validator.if(age > 40).fail({ badge: 'AGE_IS_NOT_TOO_HIGH', message: `The ${age} years student is too old.` });
+                  validator.if(age < 7).fail('AGE_IS_HIGH_ENOUGH', `The ${age} years student is too young.`);
+                  validator.if(age > 40).fail('AGE_IS_NOT_TOO_HIGH', `The ${age} years student is too old.`);
                 });
             }),
           {
@@ -73,7 +73,7 @@ describe('Validation', () => {
     `('validating student $student to $ok', ({ student, ok, failedBadges, errorMessages }) => {
       const validation = new StudentValidation(student);
       expect(validation.ok).toBe(ok);
-      const foundErrorMessages = validation.errors(...failedBadges);
+      const foundErrorMessages = validation.messages(...failedBadges);
       expect(foundErrorMessages.every(e => errorMessages.includes(e)) && errorMessages.every(e => foundErrorMessages.includes(e))).toBe(true);
     });
   });
