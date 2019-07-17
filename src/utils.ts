@@ -1,7 +1,23 @@
 /**
- * A dictionary of the default messages for failed badges.
- * The keys are the badges itself or a badge glob (a * followed by a badge postfix or a badge prefix followed by a *) and
- * the values are the messages for when the validation is failing on those badges.
+ * A dictionary to specify error messages for failed badge.
+ *
+ * The *keys* are badge globs, either one of these:
+ * - A badge itself
+ * - A * character followed by a badge postfix
+ * - A badge prefix followed by a * character
+ * - A single * character
+ *
+ * The *values* are the error message.
+ *
+ * --------------------------------
+ * Example:
+ *
+ *    {
+ *      NAME_IS_VALID: 'Name is invalid.',
+ *      '*_IS_VALID': 'This field is invalid.',
+ *      'NAME_*': 'Name has a problem.',
+ *      '*': 'The form data is not acceptable.'
+ *    }
  */
 export interface BadgeFailureMessages {
   readonly [badgeGlob: string]: string;

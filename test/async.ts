@@ -20,7 +20,7 @@ describe('Validation', () => {
           const user = userDatabase.find(u => u.id === id);
           if (!user) return reject('User not found.');
           resolve(user.username === username);
-        }, 1);
+        }, 10);
       });
     }
 
@@ -36,7 +36,7 @@ describe('Validation', () => {
           const permission = userAccessDatabase.find(u => u.id === id);
           if (!permission) return reject('User access not found.');
           resolve(permission.access);
-        }, 1);
+        }, 10);
       });
     }
 
