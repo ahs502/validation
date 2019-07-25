@@ -156,9 +156,9 @@ export default class Validator<Badge extends string, Structure extends {}> {
    *
    *    validator.check('AGE_IS_NOT_NEGATIVE', age >= 0 );
    *
-   *    validator.if(age >= 0).earn('AGE_IS_NOT_NEGATIVE').else(() => validator.fail('AGE_IS_NOT_NEGATIVE')).else();
+   *    validator.if(age >= 0).earn('AGE_IS_NOT_NEGATIVE').else().fail('AGE_IS_NOT_NEGATIVE').else();
    *
-   *    validator.if(age >= 0).earn('AGE_IS_NOT_NEGATIVE').else().fail('AGE_IS_NOT_NEGATIVE').else().if(age >= 0);
+   *    validator.if(age >= 0).earn('AGE_IS_NOT_NEGATIVE').else(() => validator.fail('AGE_IS_NOT_NEGATIVE')).else();
    *
    * --------------------------------
    * @param task Optional, the task to run if this *ring* is about to reactivate the *chain*.
@@ -264,7 +264,7 @@ export default class Validator<Badge extends string, Structure extends {}> {
   }
 
   /**
-   * Simply makes the validation to fail the `badge`, invalidates it and also skips the rest of *chain*.
+   * Simply makes the validation to fail the `badge`, invalidates it but continues the rest of *chain*.
    *
    * If the failure `message` is not specified, the validator will try to find an appropriate error message first
    * by looking at this validation's `badgeFailureMessages` and then the `Validation.defaultBadgeFailureMessages`
@@ -274,7 +274,7 @@ export default class Validator<Badge extends string, Structure extends {}> {
    * Example:
    *
    * In the example below, the validation fails the badge `'SOME_BADGE'` with error message
-   * `'Some error.'` and skips the rest of *chain*:
+   * `'Some error.'` and continues the rest of *chain*:
    *
    *    validator.fail('SOME_BADGE', 'Some error.');
    *
@@ -286,7 +286,7 @@ export default class Validator<Badge extends string, Structure extends {}> {
     this.errors[badge] =
       this.errors[badge] || message || getBadgeMessage(badge, this.validation.badgeFailureMessages, Validation.defaultBadgeFailureMessages) || '';
     this.invalidate();
-    return this.blackhole;
+    return this;
   }
 
   /**
