@@ -1,5 +1,6 @@
 import Validator from './Validator';
 import { BadgeFailureMessages, matchBadgeGlob } from './utils';
+import { Internal } from './Validator';
 
 export { BadgeFailureMessages } from './utils';
 
@@ -184,6 +185,31 @@ export default abstract class Validation<Badge extends string = string, Structur
   readonly badgeFailureMessages: BadgeFailureMessages;
 
   /**
+   * The default error messages for failed badge of all validation classes globally.
+   *
+   * The *keys* are badge globs, either one of these:
+   * - A badge itself
+   * - A * character followed by a badge postfix
+   * - A badge prefix followed by a * character
+   * - A single * character
+   *
+   * The *values* are the error message.
+   *
+   * --------------------------------
+   * Example:
+   *
+   *    Validation.defaultBadgeFailureMessages = {
+   *      NAME_IS_VALID: 'Name is invalid.',
+   *      '*_IS_VALID': 'This field is invalid.',
+   *      'NAME_*': 'Name has a problem.',
+   *      '*': 'The form data is not acceptable.'
+   *    };
+   */
+  static defaultBadgeFailureMessages: BadgeFailureMessages = {};
+
+  private readonly internal!: Internal<Badge, Structure>;
+
+  /**
    * Defines the validation and how to validate data.
    *
    * --------------------------------
@@ -207,50 +233,62 @@ export default abstract class Validation<Badge extends string = string, Structur
    * @see `badgeFailureMessages` property.
    */
   protected constructor(
-    validate: (validator: Validator<Badge, Structure>, validation: Validation<Badge, Structure>) => void,
-    badgeFailureMessages: BadgeFailureMessages = {}
-  ) {
+    validate: (validator: Validator<Badge, Structure, any>, validation: Validation<Badge, Structure>) => void,
+    badgeFailureMessages?: BadgeFailureMessages
+  );
+  protected constructor(
+    previousValidation: Validation<Badge, Structure>,
+    validate: (validator: Validator<Badge, Structure, any>, validation: Validation<Badge, Structure>) => void,
+    badgeFailureMessages?: BadgeFailureMessages
+  );
+  protected constructor(...parameters: any[]) {
+    let previousValidation: Validation<Badge, Structure> | undefined,
+      validate: (validator: Validator<Badge, Structure, any>, validation: Validation<Badge, Structure>) => void,
+      badgeFailureMessages: BadgeFailureMessages | undefined;
+    if (typeof parameters[0] === 'function') {
+      previousValidation = undefined;
+      [validate, badgeFailureMessages] = parameters;
+    } else {
+      [previousValidation, validate, badgeFailureMessages] = parameters;
+      if (!(previousValidation instanceof Validation)) throw 'The previousValidation parameter should be an instance of Validation class.';
+    }
+
     this.ok = true;
     this.$ = {} as Structure;
     this.badges = [];
     this.errors = {};
 
-    this.badgeFailureMessages = badgeFailureMessages;
+    this.badgeFailureMessages = badgeFailureMessages || {};
 
-    let asyncSetup: (resolve: (value?: any) => void, reject: (reason?: any) => void) => void;
-    const validator = new Validator(
-      this,
-      () => ((this as { ok: boolean }).ok = false),
-      this.badges as Badge[],
-      this.errors as { [badge in Badge]?: string },
-      providedAsyncSetup => (asyncSetup = providedAsyncSetup)
-    );
-    validate(validator, this);
-    this.async = new Promise(asyncSetup!);
+    this.async = new Promise((resolve, reject) => {
+      ((this as unknown) as { internal: Internal<Badge, Structure> }).internal = {
+        validation: this,
+        invalidate: () => ((this as { ok: boolean }).ok = false),
+        badges: this.badges as Badge[],
+        errors: this.errors as { [badge in Badge]?: string },
+        chains: previousValidation ? previousValidation.internal.chains : {},
+        openedChains: [],
+        closedChains: [],
+        pendingHandlers: [],
+        asyncHandlers: [],
+        asyncDone: false,
+        asyncResolve: resolve,
+        asyncReject: reject
+      };
+      previousValidation &&
+        (previousValidation.internal.openedChains
+          .filter(name => !previousValidation!.internal.closedChains.includes(name))
+          .forEach(name => delete this.internal.chains[name]),
+        previousValidation.dispose());
+
+      validate(new Validator(this.internal), this);
+
+      if (!this.internal.asyncHandlers.length) {
+        this.internal.asyncDone = true;
+        this.internal.asyncResolve();
+      }
+    });
   }
-
-  /**
-   * The default error messages for failed badge of all validation classes globally.
-   *
-   * The *keys* are badge globs, either one of these:
-   * - A badge itself
-   * - A * character followed by a badge postfix
-   * - A badge prefix followed by a * character
-   * - A single * character
-   *
-   * The *values* are the error message.
-   *
-   * --------------------------------
-   * Example:
-   *
-   *    Validation.defaultBadgeFailureMessages = {
-   *      NAME_IS_VALID: 'Name is invalid.',
-   *      '*_IS_VALID': 'This field is invalid.',
-   *      'NAME_*': 'Name has a problem.',
-   *      '*': 'The form data is not acceptable.'
-   *    };
-   */
-  static defaultBadgeFailureMessages: BadgeFailureMessages = {};
 
   /**
    * Traverses through all validations inside `this.$` data structure.
@@ -410,4 +448,15 @@ export default abstract class Validation<Badge extends string = string, Structur
     if (message) throw message;
     throw defaultMessage || '';
   }
+
+  /**
+   *
+   */
+  dispose(): void {
+    if (this.internal.asyncDone) return;
+    this.internal.asyncDone = true;
+    this.internal.asyncReject('disposed');
+  }
 }
+
+export class StructuralValidation<Structure extends {} = {}> extends Validation<'', Structure> {}

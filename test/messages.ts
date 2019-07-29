@@ -24,7 +24,7 @@ describe('Validation', () => {
       constructor(student: Student) {
         super(
           validator =>
-            validator.object(student).do(({ name, age }) => {
+            validator.object(student).then(({ name, age }) => {
               validator
                 .check('NAME_EXISTS', !!name)
                 .check('NAME_IS_STRING', () => typeof name === 'string')

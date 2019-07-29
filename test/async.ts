@@ -43,7 +43,7 @@ describe('Validation', () => {
     class UserValidation extends Validation<'ID_EXISTS' | 'USERNAME_EXISTS' | 'USERNAME_IS_VALID' | 'USER_HAS_ACCESS'> {
       constructor(user: User) {
         super(validator =>
-          validator.object(user).do(({ id, username }) => {
+          validator.object(user).then(({ id, username }) => {
             validator.check('ID_EXISTS', !!id && typeof id === 'number' && !isNaN(id));
             validator.check('USERNAME_EXISTS', !!username && typeof username === 'string' && /^[a-z]{8}$/.test(username));
             validator

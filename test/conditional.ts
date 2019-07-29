@@ -36,7 +36,7 @@ describe('Validation', () => {
     > {
       constructor(childInfo: ChildInfo, name: string, persons: readonly Person[]) {
         super((validator, validation) =>
-          validator.object(childInfo).do(({ fatherName, motherName }) => {
+          validator.object(childInfo).then(({ fatherName, motherName }) => {
             validator
               .if(!fatherName, !motherName)
               .fail('PARENTS_ARE_AVAILABLE')
@@ -78,8 +78,8 @@ describe('Validation', () => {
     > {
       constructor(studentInfo: StudentInfo, name: string, persons: readonly Person[], schools: readonly string[]) {
         super(validator => {
-          validator.into('asChild').set(new ChildInfoValidation(studentInfo, name, persons));
-          validator.object(studentInfo).do(({ schoolName, grade }) => {
+          validator.$('asChild').set(new ChildInfoValidation(studentInfo, name, persons));
+          validator.object(studentInfo).then(({ schoolName, grade }) => {
             validator
               .check('SCHOOL_NAME_EXISTS', !!schoolName)
               .check('SCHOOL_NAME_IS_VALID', () => checkNameValidity(schoolName))
@@ -93,7 +93,7 @@ describe('Validation', () => {
       }
     }
     class ParentInfoValidation extends Validation<
-      never,
+      '',
       {
         childrenNames: {
           exists: boolean;
@@ -103,12 +103,12 @@ describe('Validation', () => {
     > {
       constructor(parentInfo: ParentInfo) {
         super(validator =>
-          validator.object(parentInfo).do(({ childrenNames }) =>
+          validator.object(parentInfo).then(({ childrenNames }) =>
             validator.array(childrenNames).each((childName, index) => {
               validator
-                .into('childrenNames', index, 'exists')
+                .$('childrenNames', index, 'exists')
                 .put(!!childName)
-                .into('childrenNames', index, 'isValid')
+                .$('childrenNames', index, 'isValid')
                 .put(() => typeof childName === 'string' && checkNameValidity(childName));
             })
           )
@@ -135,7 +135,7 @@ describe('Validation', () => {
     > {
       constructor(person: Person, persons: readonly Person[], schools: readonly string[]) {
         super(validator =>
-          validator.object(person).do(({ name, age, type, info }) => {
+          validator.object(person).then(({ name, age, type, info }) => {
             validator
               .check('NAME_EXISTS', !!name)
               .check('NAME_IS_VALID', () => typeof name === 'string' && checkNameValidity(name))
@@ -144,16 +144,16 @@ describe('Validation', () => {
             validator.check('TYPE_EXISTS', !!type).check('TYPE_IS_VALID', () => ['CHILD', 'STUDENT', 'PARENT'].includes(type));
             validator.when('AGE_IS_VALID', 'TYPE_IS_VALID').then(() => {
               validator.if(type === 'CHILD').then(() => {
-                validator.into('childInfo').set(new ChildInfoValidation(info as ChildInfo, name, persons));
+                validator.$('childInfo').set(new ChildInfoValidation(info as ChildInfo, name, persons));
                 validator.check('IF_CHILD_AGE_IS_UNDER_7', age < 7);
               });
               validator.if(type === 'STUDENT').then(() => {
-                validator.into('studentInfo').set(new StudentInfoValidator(info as StudentInfo, name, persons, schools));
+                validator.$('studentInfo').set(new StudentInfoValidator(info as StudentInfo, name, persons, schools));
                 validator.check('IF_STUDENT_AGE_IS_ABOVE_7', age >= 7);
                 validator.check('IF_STUDENT_AGE_IS_UNDER_18', age <= 18);
               });
               validator.if(type === 'PARENT').then(() => {
-                validator.into('parentInfo').set(new ParentInfoValidation(info as ParentInfo));
+                validator.$('parentInfo').set(new ParentInfoValidation(info as ParentInfo));
                 validator.check('IF_PARENT_AGE_IS_ABOVE_14', age >= 14);
               });
             });

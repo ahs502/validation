@@ -1,37 +1,31 @@
 import Validation from './Validation';
-import { getBadgeMessage } from './utils';
+import { getBadgeMessage, Chain, AsyncHandler, PendingHandler } from './utils';
 
-interface AsyncHandler {
-  promise: Promise<any>;
-  chain: {
-    method: string;
-    args: any[];
-  }[];
+export interface Internal<Badge extends string, Structure extends {}> {
+  validation: Validation<Badge, Structure>;
+  invalidate: () => void;
+  badges: Badge[];
+  errors: { [badge in Badge]?: string };
+  chains: { [name: string]: Chain<Badge>; [index: number]: Chain<Badge> };
+  openedChains: string[];
+  closedChains: string[];
+  pendingHandlers: PendingHandler[];
+  asyncHandlers: AsyncHandler[];
+  asyncDone: boolean;
+  asyncResolve: (value?: any) => void;
+  asyncReject: (reason?: any) => void;
 }
 
-export default class Validator<Badge extends string, Structure extends {}> {
-  private readonly validation: Validation<Badge, Structure>;
-  private readonly invalidate: () => void;
-  private readonly badges: Badge[];
-  private readonly errors: { [badge in Badge]?: string };
+export default class Validator<Badge extends string, Structure extends {}, Data extends any> {
+  private readonly internal: Internal<Badge, Structure>;
   private readonly blackhole: this;
-  private readonly asyncHandlers: AsyncHandler[];
-  private asyncDone: boolean;
-  private asyncResolve!: (value?: any) => void;
-  private asyncReject!: (reason?: any) => void;
+  private readonly chain?: Chain<Badge>;
 
-  constructor(
-    validation: Validation<Badge, Structure>,
-    invalidate: () => void,
-    badges: Badge[],
-    errors: { [badge in Badge]?: string },
-    consumeAsyncSetup: (providedAsyncSetup: (resolve: (value?: any) => void, reject: (reason?: any) => void) => void) => void
-  ) {
-    const me = this;
-    this.validation = validation;
-    this.invalidate = invalidate;
-    this.badges = badges;
-    this.errors = errors;
+  private data: Data;
+
+  constructor(internal: Internal<Badge, Structure>, chain?: Chain<Badge>) {
+    const validator = this;
+    this.internal = internal;
     this.blackhole = new Proxy(
       {},
       {
@@ -40,253 +34,92 @@ export default class Validator<Badge extends string, Structure extends {}> {
           if (property === 'else')
             return (task?: () => void) => {
               task && task();
-              return me;
+              return validator;
             };
-          return () => me.blackhole;
+          return () => validator.blackhole;
         }
       }
     ) as this;
-    this.asyncHandlers = [];
-    this.asyncDone = false;
-    consumeAsyncSetup((resolve, reject) => {
-      this.asyncResolve = resolve;
-      this.asyncReject = reject;
-      if (this.asyncHandlers.length) return;
-      this.asyncDone = true;
-      this.asyncResolve();
-    });
+    this.chain = chain;
+    this.data = undefined as any;
   }
 
   /**
-   * Lets the *chain* continues iff this validation satisfies *all* the specified badges at the moment or no badges are specified.
-   * Otherwise, invalidates the validation and skips execution of the rest of *chain*.
-   *
-   * --------------------------------
-   * Example:
-   *
-   * In the example below, the validator goes for checking the badge `'X_EQUALS_Y'` only if both
-   * badges `'X_IS_VALID'` and `'Y_IS_VALID'` are available, otherwise, invalidates the validation and skips the check:
-   *
-   *    validator.check('X_IS_VALID', typeof x === 'number' );
-   *    validator.check('Y_IS_VALID', typeof y === 'number' );
-   *    validator.when('X_IS_VALID', 'Y_IS_VALID').check('X_EQUALS_Y', () => x === y );
-   *
-   * --------------------------------
-   * @param requiredBadges The required badges to continue the *chain*.
-   * @see `check` *ring* method.
+   * Fully throws away any other *ring* without any intention to return back.
    */
-  when(...requiredBadges: Badge[]): this {
-    if (requiredBadges.length === 0) return this;
-    if (this.validation.has(requiredBadges[0], ...requiredBadges.slice(1))) return this;
-    this.invalidate();
-    return this.blackhole;
-  }
-
-  /**
-   * Lets the *chain* continues iff all the specified conditions (or condition providers) are fulfilled at the moment
-   * or no conditions (or condition providers) are specified.
-   * Otherwise, invalidates the validation (unlike `if` *ring* method) and skips execution of the rest of *chain*.
-   *
-   * --------------------------------
-   * Example:
-   *
-   * In the example below, the validator goes for checking the badge `'N_IS_POSITIVE'` only if
-   * the condition `n !== null` is fulfilled, otherwise, invalidates the validation and skips the check:
-   *
-   *    validator.must(n !== null).check('N_IS_POSITIVE', () => n > 0 );
-   *
-   * --------------------------------
-   * @param conditions The required conditions (or condition providers) to continue the *chain*.
-   *                   If a condition provider is given, the method first retrieve the condition
-   *                   itself just before checking, then continues to check.
-   * @see `if` *ring* method.
-   * @see `check` *ring* method.
-   */
-  must(...conditions: (boolean | (() => boolean))[]): this {
-    for (let i = 0; i < conditions.length; ++i) {
-      const condition = conditions[i];
-      if (typeof condition === 'function' ? !condition() : !condition) {
-        this.invalidate();
-        return this.blackhole;
+  private static blackhole = new Proxy(
+    {},
+    {
+      get: (target, property, receiver) => {
+        if (property === 'end') return () => undefined;
+        return () => Validator.blackhole;
       }
     }
-    return this;
-  }
+  );
 
-  /**
-   * Lets the *chain* continues iff all the specified conditions (or condition providers) are fulfilled at the moment
-   * or no conditions (or condition providers) are specified.
-   * Otherwise, **only** skips execution of the rest of *chain* but **does not** invalidate the validation (unlike `must` *ring* method).
-   *
-   * --------------------------------
-   * Example:
-   *
-   * In the example below, the validator treats `nickName` as an **optional** parameter and goes for
-   * checking the badge `'NICK_NAME_IS_VALID'` only if `nickName` exists, otherwise, just skips the check:
-   *
-   *    validator.if(!!nickName).check('NICK_NAME_IS_VALID', () => /^[a-z]{3,20}$/.test(nickName));
-   *
-   * --------------------------------
-   * @param conditions The required conditions (or condition providers) to continue the *chain*.
-   *                   If a condition provider is given, the method first retrieve the condition
-   *                   itself just before checking, then continues to check.
-   * @see `must` *ring* method.
-   * @see `check` *ring* method.
-   */
-  if(...conditions: (boolean | (() => boolean))[]): this {
-    for (let i = 0; i < conditions.length; ++i) {
-      const condition = conditions[i];
-      if (typeof condition === 'function' ? !condition() : !condition) return this.blackhole;
+  private set$(path: (string | number)[], value: any): void {
+    let $ = this.internal.validation.$ as any;
+    path.slice(0, -1).forEach((property, index) => {
+      if (!$[property]) {
+        const nextProperty = path[index + 1];
+        $[property] = typeof nextProperty === 'number' ? [] : {};
+      }
+      $ = $[property];
+    });
+    $[path[path.length - 1]] = value;
+  }
+  private static end<Badge extends string, Structure extends {}>(internal: Internal<Badge, Structure>, name: string, data: any): void {
+    if (internal.asyncDone) return;
+    if (internal.closedChains.includes(name)) throw `Chain ${name} is already closed.`;
+    internal.closedChains.push(name);
+    internal.chains[name].data = data;
+    for (let i = 0; i < internal.pendingHandlers.length; i++) {
+      const pendingHandler = internal.pendingHandlers[i];
+      if (!pendingHandler.names.every(name => internal.closedChains.includes(name))) continue;
+      pendingHandler.tail.forEach(ring => (pendingHandler.validator = pendingHandler.validator[ring.method](...ring.args)));
+      internal.pendingHandlers.splice(i--, 1);
     }
-    return this;
   }
 
   /**
-   * Skips the rest of *chain* if it's not skipped before this point.
    *
-   * Retrieves the rest of *chain* if it's skipped before from this point on
-   * and also runs the `task` if specified.
-   *
-   * It won't affect the validity status.
-   *
-   * --------------------------------
-   * Example:
-   *
-   * All the example *chain*s below have the exact same behaviour:
-   *
-   *    validator.check('AGE_IS_NOT_NEGATIVE', age >= 0 );
-   *
-   *    validator.if(age >= 0).earn('AGE_IS_NOT_NEGATIVE').else().fail('AGE_IS_NOT_NEGATIVE').else();
-   *
-   *    validator.if(age >= 0).earn('AGE_IS_NOT_NEGATIVE').else(() => validator.fail('AGE_IS_NOT_NEGATIVE')).else();
-   *
-   * --------------------------------
-   * @param task Optional, the task to run if this *ring* is about to reactivate the *chain*.
-   * @see `if` *ring* method.
-   * @see `earn` *ring* method.
-   * @see `fail` *ring* method.
+   * @param name
+   * @param watches
    */
-  else(task?: () => void): this {
-    // Just bypass task by definition!
-    return this.blackhole;
-  }
+  in(name: string, ...watches: any[]): Validator<Badge, Structure, any> {
+    if (this.chain) throw `Chain '${this.chain.name}' is already openned.`;
+    if (this.internal.openedChains.includes(name)) throw `Chain ${name} already exists.`;
 
-  /**
-   * Runs the `task` if specified.
-   *
-   * It won't affect the validity status.
-   *
-   * --------------------------------
-   * Example:
-   *
-   *    validator
-   *      .if(!!nickName)
-   *      .then(() => {
-   *        validator
-   *          .check('NICK_NAME_IS_VALID', /^[a-z]{3,20}$/.test(nickName))
-   *          .check('NICK_NAME_IS_NICE', nickName.includes('nice'))
-   *        validator
-   *          .check('SHORT_NICK_NAME_IS_VALID', /^[a-z]{3,20}$/.test(shortNickName))
-   *          .when('NICK_NAME_IS_VALID')
-   *          .check('SHORT_NICK_NAME_IS_DIFFERENT', shortNickName !== nickName);
-   *      })
-   *      .then( ... )
-   *      ...
-   *
-   * --------------------------------
-   * @param task The task to run.
-   * @see `if` *ring* method.
-   * @see `check` *ring* method.
-   * @see `when` *ring* method.
-   */
-  then(task: () => void): this {
-    task();
-    return this;
-  }
+    this.internal.openedChains.push(name);
 
-  /**
-   * Checks the `validity` condition (or `validity` condition provider) to see if it
-   * fulfills or not.
-   *
-   * If yes, then the validation will earn the `badge` and the *chain* continues.
-   *
-   * If no, then the validation will fail at the `badge` and skip the rest of *chain*.
-   * It will allocate `message` as the error message allocated to this badge if provided.
-   * Otherwise, it'll try to find an appropriate error message first by looking at this
-   * validation's `badgeFailureMessages` and then the `Validation.defaultBadgeFailureMessages`
-   * and finally if nothing gets found, an empty string `''` will be set for it.
-   *
-   * All failed badge will be available both through the `errors` and `failedBadges` properties.
-   *
-   * --------------------------------
-   * Example:
-   *
-   * In the example below, the validator checks the condition `age >= 0`,
-   * if fulfilled, then it receives the badge `'AGE_IS_NOT_NEGATIVE'` and continues the *chain*,
-   * otherwise, it fails at badge `'AGE_IS_NOT_NEGATIVE'` with error message `'Age -... is negative and invalid.'` and skips the rest of *chain*:
-   *
-   *    validator.check('AGE_IS_NOT_NEGATIVE', age >= 0, `Age ${age} is negative and invalid.`);
-   *
-   * --------------------------------
-   * @param badge The badge to decide whether to earn or fail at.
-   * @param validity The condition to check.
-   * @param message Optional, the error message allocated to this badge if it's going to fail at it.
-   */
-  check(badge: Badge, validity: boolean | (() => boolean), message?: string): this {
-    if (typeof validity === 'function' ? validity() : validity) {
-      this.badges.includes(badge) || this.badges.push(badge);
-      return this;
+    if (name in this.internal.chains) {
+      const { watches: oldWatches, effects } = this.internal.chains[name];
+      if (watches.length === oldWatches.length && watches.every((thing, index) => thing === oldWatches[index])) {
+        effects.invalidates && this.internal.invalidate();
+        effects.badges.forEach(badge => this.internal.badges.includes(badge) || this.internal.badges.push(badge));
+        for (const badge in effects.errors) {
+          this.internal.errors[badge] = effects.errors[badge];
+        }
+        effects.$.forEach(pair => this.set$(pair.path, pair.value));
+        Validator.end(this.internal, name, this.data);
+        return Validator.blackhole;
+      }
     }
-    this.errors[badge] =
-      this.errors[badge] || message || getBadgeMessage(badge, this.validation.badgeFailureMessages, Validation.defaultBadgeFailureMessages) || '';
-    this.invalidate();
-    return this.blackhole;
-  }
 
-  /**
-   * Simply adds the `badge` to this validation.
-   *
-   * It won't affect the validity status.
-   *
-   * --------------------------------
-   * Example:
-   *
-   * In the example below, the validation earns the badge `'SOME_BADGE'` and continues the *chain*:
-   *
-   *    validator.earn('SOME_BADGE');
-   *
-   * --------------------------------
-   * @param badge The badge to earn.
-   */
-  earn(badge: Badge): this {
-    this.badges.includes(badge) || this.badges.push(badge);
-    return this;
-  }
-
-  /**
-   * Simply makes the validation to fail the `badge`, invalidates it but continues the rest of *chain*.
-   *
-   * If the failure `message` is not specified, the validator will try to find an appropriate error message first
-   * by looking at this validation's `badgeFailureMessages` and then the `Validation.defaultBadgeFailureMessages`
-   * and finally if nothing gets found, an empty string `''` will be set for it.
-   *
-   * --------------------------------
-   * Example:
-   *
-   * In the example below, the validation fails the badge `'SOME_BADGE'` with error message
-   * `'Some error.'` and continues the rest of *chain*:
-   *
-   *    validator.fail('SOME_BADGE', 'Some error.');
-   *
-   * --------------------------------
-   * @param badge The badge to fail.
-   * @param message Optional, the error message allocated to this badge if it's going to fail at it.
-   */
-  fail(badge: Badge, message?: string): this {
-    this.errors[badge] =
-      this.errors[badge] || message || getBadgeMessage(badge, this.validation.badgeFailureMessages, Validation.defaultBadgeFailureMessages) || '';
-    this.invalidate();
-    return this;
+    return new Validator(
+      this.internal,
+      (this.internal.chains[name] = {
+        name,
+        watches,
+        data: undefined,
+        effects: {
+          invalidates: false,
+          badges: [],
+          errors: {},
+          $: []
+        }
+      })
+    );
   }
 
   /**
@@ -320,29 +153,14 @@ export default class Validator<Badge extends string, Structure extends {}> {
    * @see `do` *ring* method.
    * @see `array` *ring* method.
    */
-  object<T extends any = any>(target: T) {
-    const validator = this;
-    if (target && typeof target === 'object' && !Array.isArray(target))
-      return {
-        /**
-         * Follows the `object()` *ring* on a *chain* and makes access
-         * validating the contents of the checked target safely.
-         *
-         * --------------------------------
-         * @param task The task to perform on the target.
-         * @see `object` *ring* method.
-         */
-        do(task: (target: T) => void) {
-          task(target);
-          return validator as Validator<Badge, Structure>;
-        }
-      };
-    this.invalidate();
-    return {
-      do() {
-        return validator.blackhole;
-      }
-    };
+  object<T extends any>(target: T): Validator<Badge, Structure, T> {
+    if (target && typeof target === 'object' && !Array.isArray(target)) {
+      this.data = target as any;
+      return this as any;
+    }
+    this.internal.invalidate();
+    this.chain && (this.chain.effects.invalidates = true);
+    return this.blackhole as any;
   }
 
   /**
@@ -380,135 +198,276 @@ export default class Validator<Badge extends string, Structure extends {}> {
    * @see `object` *ring* method.
    * @see `into` *ring* method.
    */
-  array<A extends any = any>(target: A) {
-    const validator = this;
-    if (target && Array.isArray(target))
-      return {
-        /**
-         * Follows the `array()` *ring* on a *chain* and makes access
-         * validating the items of the checked target safely.
-         *
-         * --------------------------------
-         * @param task The task to perform on each item of the target,
-         *             providing both the item and its index to the implementation.
-         * @see `array` *ring* method.
-         */
-        each(task: (item: A extends readonly (infer T)[] ? T : any, index: number) => void) {
-          target.forEach(task);
-          return validator as Validator<Badge, Structure>;
-        }
-      };
-    this.invalidate();
-    return {
-      each() {
-        return validator.blackhole;
-      }
-    };
+  array<T extends any>(target: T): Validator<Badge, Structure, T> {
+    if (target && Array.isArray(target)) {
+      this.data = target as any;
+      return this as any;
+    }
+    this.internal.invalidate();
+    this.chain && (this.chain.effects.invalidates = true);
+    return this.blackhole as any;
   }
 
   /**
-   * Addresses somewhere specific in `this.$` data structure,
-   * so we can put something into it through the next `set()` or `put()` *ring* methods.
+   * Checks the `validity` condition (or `validity` condition provider) to see if it
+   * fulfills or not.
    *
-   * It has to be followed by either a `set()` or a `put()` *ring* method.
+   * If yes, then the validation will earn the `badge` and the *chain* continues.
+   *
+   * If no, then the validation will fail at the `badge` and skip the rest of *chain*.
+   * It will allocate `message` as the error message allocated to this badge if provided.
+   * Otherwise, it'll try to find an appropriate error message first by looking at this
+   * validation's `badgeFailureMessages` and then the `Validation.defaultBadgeFailureMessages`
+   * and finally if nothing gets found, an empty string `''` will be set for it.
+   *
+   * All failed badge will be available both through the `errors` and `failedBadges` properties.
+   *
+   * --------------------------------
+   * Example:
+   *
+   * In the example below, the validator checks the condition `age >= 0`,
+   * if fulfilled, then it receives the badge `'AGE_IS_NOT_NEGATIVE'` and continues the *chain*,
+   * otherwise, it fails at badge `'AGE_IS_NOT_NEGATIVE'` with error message `'Age -... is negative and invalid.'` and skips the rest of *chain*:
+   *
+   *    validator.check('AGE_IS_NOT_NEGATIVE', age >= 0, `Age ${age} is negative and invalid.`);
+   *
+   * --------------------------------
+   * @param badge The badge to decide whether to earn or fail at.
+   * @param validity The condition to check.
+   * @param message Optional, the error message allocated to this badge if it's going to fail at it.
+   */
+  check(badge: Badge, validity: boolean | ((data: Data) => boolean), message?: string | ((data: Data) => string)): this {
+    if (typeof validity === 'function' ? validity(this.data) : validity) {
+      this.internal.badges.includes(badge) || (this.internal.badges.push(badge), this.chain && this.chain.effects.badges.push(badge));
+      return this;
+    }
+    this.internal.errors[badge] =
+      this.internal.errors[badge] ||
+      (message && (typeof message === 'function' ? message(this.data) : message)) ||
+      getBadgeMessage(badge, this.internal.validation.badgeFailureMessages, Validation.defaultBadgeFailureMessages) ||
+      '';
+    this.internal.invalidate();
+    this.chain && ((this.chain.effects.invalidates = true), (this.chain.effects.errors[badge] = this.internal.errors[badge]));
+    return this.blackhole;
+  }
+
+  /**
+   * Simply adds the `badge` to this validation.
    *
    * It won't affect the validity status.
    *
    * --------------------------------
    * Example:
    *
-   * In the example below, the path validation first checks for existance of `path.points` and makes sure
-   * that it is an existing array then iterates on each point and makes the `this.$` data structure with them:
+   * In the example below, the validation earns the badge `'SOME_BADGE'` and continues the *chain*:
    *
-   *    interface Point { ... }
-   *    class PointValidation extends Validation< ... > { ... }
-   *
-   *    interface Path {
-   *      points: Point[];
-   *      ...
-   *    }
-   *    class PathValidation extends Validation< ... , {
-   *      points: {
-   *        exists: boolean;
-   *        validation: PointValidation;
-   *      }[];
-   *    }> {
-   *      constructor(path: Path) {
-   *        super(validator => {
-   *          ...
-   *          validator
-   *            .array(path.points)
-   *            .do((point, index) => {
-   *              validator.into('points', index, 'exists').put(!!point);
-   *              validator.into('points', index, 'validation').set(new PointValidation(point));
-   *            });
-   *          ...
-   *        });
-   *      }
-   *    }
+   *    validator.earn('SOME_BADGE');
    *
    * --------------------------------
-   * @param root The main key in the `this.$` object.
-   * @param path The trailing keys / indexes after `root` indicating where the next
-   *             `set()` or `put()` *ring* method should put the value to.
-   * @see `set` *ring* method.
-   * @see `put` *ring* method.
-   * @see `Validation` class constructor.
-   * @see `object` *ring* method.
-   * @see `array` *ring* method.
+   * @param badge The badge to earn.
    */
-  into(root: keyof Structure, ...path: (string | number)[]) {
-    path.unshift(root as string | number); //TODO: Consider symbols here too.
-    const validator = this;
-    return {
-      /**
-       * Follows the `into()` *ring* on a *chain* and sets a nested validation
-       * into the addressed position of `this.$` data structure.
-       *
-       * It will make the validation fail and skip the rest of *chain* iff
-       * the nested validation already fails.
-       *
-       * --------------------------------
-       * @param validation The nested validation (or validation provider) to be set into
-       *                   the addressed position of `this.$` data structure.
-       * @see `into` *ring* method.
-       */
-      set(validation: Validation<any> | (() => Validation<any>)): Validator<Badge, Structure> {
-        const validationInstance = typeof validation === 'function' ? validation() : validation;
-        set$(validationInstance);
-        if (validationInstance.ok) return validator;
-        validator.invalidate();
-        return validator.blackhole;
-      },
+  earn(badge: Badge): this {
+    this.internal.badges.includes(badge) || (this.internal.badges.push(badge), this.chain && this.chain.effects.badges.push(badge));
+    return this;
+  }
 
-      /**
-       * Follows the `into()` *ring* on a *chain* and custom value
-       * into the addressed position of `this.$` data structure.
-       *
-       * It won't affect the validity status.
-       *
-       * --------------------------------
-       * @param value The custom value (or value provider) to be set into
-       *              the addressed position of `this.$` data structure.
-       * @see `into` *ring* method.
-       */
-      put(value: any | (() => any)): Validator<Badge, Structure> {
-        set$(typeof value === 'function' ? value() : value);
-        return validator;
+  /**
+   * Simply makes the validation to fail the `badge`, invalidates it but continues the rest of *chain*.
+   *
+   * If the failure `message` is not specified, the validator will try to find an appropriate error message first
+   * by looking at this validation's `badgeFailureMessages` and then the `Validation.defaultBadgeFailureMessages`
+   * and finally if nothing gets found, an empty string `''` will be set for it.
+   *
+   * --------------------------------
+   * Example:
+   *
+   * In the example below, the validation fails the badge `'SOME_BADGE'` with error message
+   * `'Some error.'` and continues the rest of *chain*:
+   *
+   *    validator.fail('SOME_BADGE', 'Some error.');
+   *
+   * --------------------------------
+   * @param badge The badge to fail.
+   * @param message Optional, the error message allocated to this badge if it's going to fail at it.
+   */
+  fail(badge: Badge, message?: string | ((data: Data) => string)): this {
+    this.internal.errors[badge] =
+      this.internal.errors[badge] ||
+      (message && (typeof message === 'function' ? message(this.data) : message)) ||
+      getBadgeMessage(badge, this.internal.validation.badgeFailureMessages, Validation.defaultBadgeFailureMessages) ||
+      '';
+    this.internal.invalidate();
+    this.chain && ((this.chain.effects.invalidates = true), (this.chain.effects.errors[badge] = this.internal.errors[badge]));
+    return this;
+  }
+
+  /**
+   * Lets the *chain* continues iff this validation satisfies *all* the specified badges at the moment or no badges are specified.
+   * Otherwise, invalidates the validation and skips execution of the rest of *chain*.
+   *
+   * --------------------------------
+   * Example:
+   *
+   * In the example below, the validator goes for checking the badge `'X_EQUALS_Y'` only if both
+   * badges `'X_IS_VALID'` and `'Y_IS_VALID'` are available, otherwise, invalidates the validation and skips the check:
+   *
+   *    validator.check('X_IS_VALID', typeof x === 'number' );
+   *    validator.check('Y_IS_VALID', typeof y === 'number' );
+   *    validator.when('X_IS_VALID', 'Y_IS_VALID').check('X_EQUALS_Y', () => x === y );
+   *
+   * --------------------------------
+   * @param requiredBadges The required badges to continue the *chain*.
+   * @see `check` *ring* method.
+   */
+  when(...badges: Badge[]): this {
+    if (badges.length === 0) return this;
+    if (this.internal.validation.has(...badges)) return this;
+    this.internal.invalidate();
+    this.chain && (this.chain.effects.invalidates = true);
+    return this.blackhole;
+  }
+
+  /**
+   * Lets the *chain* continues iff all the specified conditions (or condition providers) are fulfilled at the moment
+   * or no conditions (or condition providers) are specified.
+   * Otherwise, invalidates the validation (unlike `if` *ring* method) and skips execution of the rest of *chain*.
+   *
+   * --------------------------------
+   * Example:
+   *
+   * In the example below, the validator goes for checking the badge `'N_IS_POSITIVE'` only if
+   * the condition `n !== null` is fulfilled, otherwise, invalidates the validation and skips the check:
+   *
+   *    validator.must(n !== null).check('N_IS_POSITIVE', () => n > 0 );
+   *
+   * --------------------------------
+   * @param conditions The required conditions (or condition providers) to continue the *chain*.
+   *                   If a condition provider is given, the method first retrieve the condition
+   *                   itself just before checking, then continues to check.
+   * @see `if` *ring* method.
+   * @see `check` *ring* method.
+   */
+  must(...conditions: (boolean | ((data: Data) => boolean))[]): this {
+    for (let i = 0; i < conditions.length; ++i) {
+      const condition = conditions[i];
+      if (typeof condition === 'function' ? !condition(this.data) : !condition) {
+        this.internal.invalidate();
+        this.chain && (this.chain.effects.invalidates = true);
+        return this.blackhole;
       }
-    };
-
-    function set$(value: any) {
-      let $ = validator.validation.$ as any;
-      path.slice(0, -1).forEach((property, index) => {
-        if (!$[property]) {
-          const nextProperty = path[index + 1];
-          $[property] = typeof nextProperty === 'number' ? [] : {};
-        }
-        $ = $[property];
-      });
-      $[path[path.length - 1]] = value;
     }
+    return this;
+  }
+
+  /**
+   * Lets the *chain* continues iff all the specified conditions (or condition providers) are fulfilled at the moment
+   * or no conditions (or condition providers) are specified.
+   * Otherwise, **only** skips execution of the rest of *chain* but **does not** invalidate the validation (unlike `must` *ring* method).
+   *
+   * --------------------------------
+   * Example:
+   *
+   * In the example below, the validator treats `nickName` as an **optional** parameter and goes for
+   * checking the badge `'NICK_NAME_IS_VALID'` only if `nickName` exists, otherwise, just skips the check:
+   *
+   *    validator.if(!!nickName).check('NICK_NAME_IS_VALID', () => /^[a-z]{3,20}$/.test(nickName));
+   *
+   * --------------------------------
+   * @param conditions The required conditions (or condition providers) to continue the *chain*.
+   *                   If a condition provider is given, the method first retrieve the condition
+   *                   itself just before checking, then continues to check.
+   * @see `must` *ring* method.
+   * @see `check` *ring* method.
+   */
+  if(...conditions: (boolean | ((data: Data) => boolean))[]): this {
+    for (let i = 0; i < conditions.length; ++i) {
+      const condition = conditions[i];
+      if (typeof condition === 'function' ? !condition(this.data) : !condition) return this.blackhole;
+    }
+    return this;
+  }
+
+  /**
+   * Skips the rest of *chain* if it's not skipped before this point.
+   *
+   * Retrieves the rest of *chain* if it's skipped before from this point on
+   * and also runs the `task` if specified.
+   *
+   * It won't affect the validity status.
+   *
+   * --------------------------------
+   * Example:
+   *
+   * All the example *chain*s below have the exact same behaviour:
+   *
+   *    validator.check('AGE_IS_NOT_NEGATIVE', age >= 0 );
+   *
+   *    validator.if(age >= 0).earn('AGE_IS_NOT_NEGATIVE').else().fail('AGE_IS_NOT_NEGATIVE').else();
+   *
+   *    validator.if(age >= 0).earn('AGE_IS_NOT_NEGATIVE').else(() => validator.fail('AGE_IS_NOT_NEGATIVE')).else();
+   *
+   * --------------------------------
+   * @param task Optional, the task to run if this *ring* is about to reactivate the *chain*.
+   * @see `if` *ring* method.
+   * @see `earn` *ring* method.
+   * @see `fail` *ring* method.
+   */
+  else(task?: () => void): Validator<Badge, Structure, any> {
+    // Just bypass task by definition!
+    return this.blackhole;
+  }
+
+  /**
+   * Runs the `task` if specified.
+   *
+   * It won't affect the validity status.
+   *
+   * --------------------------------
+   * Example:
+   *
+   *    validator
+   *      .if(!!nickName)
+   *      .then(() => {
+   *        validator
+   *          .check('NICK_NAME_IS_VALID', /^[a-z]{3,20}$/.test(nickName))
+   *          .check('NICK_NAME_IS_NICE', nickName.includes('nice'))
+   *        validator
+   *          .check('SHORT_NICK_NAME_IS_VALID', /^[a-z]{3,20}$/.test(shortNickName))
+   *          .when('NICK_NAME_IS_VALID')
+   *          .check('SHORT_NICK_NAME_IS_DIFFERENT', shortNickName !== nickName);
+   *      })
+   *      .then( ... )
+   *      ...
+   *
+   * --------------------------------
+   * @param task The task to run.
+   * @see `if` *ring* method.
+   * @see `check` *ring* method.
+   * @see `when` *ring* method.
+   */
+  then<T>(task: (data: Data) => T): Validator<Badge, Structure, T extends any ? T : any> {
+    this.data = task(this.data) as any;
+    return this as any;
+  }
+
+  /**
+   *
+   * @param task
+   */
+  do<T>(task: (...items: (Data extends readonly (infer I)[] ? I : any)[]) => T): Validator<Badge, Structure, T extends any ? T : any> {
+    if (!Array.isArray(this.data)) throw 'The target is not an array.';
+    this.data = task(...(this.data as any[])) as any;
+    return this as any;
+  }
+
+  /**
+   *
+   * @param task
+   */
+  each(task: (item: Data extends readonly (infer I)[] ? I : any, index: number) => void): this {
+    if (!Array.isArray(this.data)) throw 'The target is not an array.';
+    (this.data as any[]).forEach(task);
+    return this;
   }
 
   /**
@@ -580,64 +539,186 @@ export default class Validator<Badge extends string, Structure extends {}> {
    * @see `check` *ring* method.
    * @see `if` *ring* method.
    */
-  await(promise: Promise<any> | (() => Promise<any>)): this {
+  await<T>(promise: Promise<T> | ((data: Data) => Promise<T>)): Validator<Badge, Structure, T extends any ? T : any> {
     const asyncHandler: AsyncHandler = {
-      promise: (typeof promise === 'function' ? promise() : promise)
+      promise: (typeof promise === 'function' ? promise(this.data) : promise)
         .then(() => {
-          if (this.asyncDone) return;
+          if (this.internal.asyncDone) return;
           let validator = this as any;
-          asyncHandler.chain.forEach(ring => (validator = validator[ring.method](...ring.args)));
-          this.asyncHandlers.splice(this.asyncHandlers.indexOf(asyncHandler), 1);
-          if (this.asyncHandlers.length) return;
-          this.asyncDone = true;
-          this.asyncResolve();
+          asyncHandler.tail.forEach(ring => (validator = validator[ring.method](...ring.args)));
+          this.internal.asyncHandlers.splice(this.internal.asyncHandlers.indexOf(asyncHandler), 1);
+          if (this.internal.asyncHandlers.length) return;
+          this.internal.asyncDone = true;
+          this.internal.asyncResolve();
         })
         .catch(reason => {
-          this.invalidate();
-          if (this.asyncDone) return;
-          this.asyncDone = true;
-          this.asyncReject(reason);
+          this.internal.invalidate();
+          // this.chain && (this.chain.effects.invalidates = true);
+          if (this.internal.asyncDone) return;
+          this.internal.asyncDone = true;
+          this.internal.asyncReject(reason);
         }),
-      chain: []
+      tail: []
     };
-    this.asyncHandlers.push(asyncHandler);
+    this.internal.asyncHandlers.push(asyncHandler);
     const chainRedirector = new Proxy(
       {},
       {
         get: (target, property, receiver) => {
-          if (property === 'end') return () => undefined;
           return (...args: any[]) => {
-            asyncHandler.chain.push({
+            asyncHandler.tail.push({
               method: String(property),
               args
             });
+            if (property === 'end') return undefined;
             return chainRedirector;
           };
         }
       }
-    ) as this;
-    return chainRedirector;
+    );
+    return chainRedirector as any;
   }
 
   /**
-   * Ends the *chain*. No more *ring*s can attach to **this** *chain* anymore.
+   *
+   * @param names
+   */
+  after(...names: string[]): Validator<Badge, Structure, any[]> {
+    if (names.every(name => this.internal.closedChains.includes(name))) {
+      this.data = names.map(name => this.internal.chains[name].data) as any;
+      return this as any;
+    }
+    const pendingHandler: PendingHandler = {
+      names,
+      validator: this,
+      tail: []
+    };
+    this.internal.pendingHandlers.push(pendingHandler);
+    const chainRedirector = new Proxy(
+      {},
+      {
+        get: (target, property, receiver) => {
+          return (...args: any[]) => {
+            pendingHandler.tail.push({
+              method: String(property),
+              args
+            });
+            if (property === 'end') return undefined;
+            return chainRedirector;
+          };
+        }
+      }
+    );
+    return chainRedirector as any;
+  }
+
+  /**
+   * Addresses somewhere specific in `this.$` data structure,
+   * so we can put something into it through the next `set()` or `put()` *ring* methods.
+   *
+   * It has to be followed by either a `set()` or a `put()` *ring* method.
    *
    * It won't affect the validity status.
-   *
-   * Its most common use case is to close returning *chain*s in promises
-   * given to `await` *ring* methods. Look at `await` *ring* method for more details.
    *
    * --------------------------------
    * Example:
    *
-   *    validator.check(...).check(...).end(); // That's fine!
+   * In the example below, the path validation first checks for existance of `path.points` and makes sure
+   * that it is an existing array then iterates on each point and makes the `this.$` data structure with them:
    *
-   *    validator.check(...).check(...).end().check(...); // Error.
+   *    interface Point { ... }
+   *    class PointValidation extends Validation< ... > { ... }
+   *
+   *    interface Path {
+   *      points: Point[];
+   *      ...
+   *    }
+   *    class PathValidation extends Validation< ... , {
+   *      points: {
+   *        exists: boolean;
+   *        validation: PointValidation;
+   *      }[];
+   *    }> {
+   *      constructor(path: Path) {
+   *        super(validator => {
+   *          ...
+   *          validator
+   *            .array(path.points)
+   *            .do((point, index) => {
+   *              validator.into('points', index, 'exists').put(!!point);
+   *              validator.into('points', index, 'validation').set(new PointValidation(point));
+   *            });
+   *          ...
+   *        });
+   *      }
+   *    }
    *
    * --------------------------------
-   * @see `await` *ring* method.
+   * @param root The main key in the `this.$` object.
+   * @param path The trailing keys / indexes after `root` indicating where the next
+   *             `set()` or `put()` *ring* method should put the value to.
+   * @see `set` *ring* method.
+   * @see `put` *ring* method.
+   * @see `Validation` class constructor.
+   * @see `object` *ring* method.
+   * @see `array` *ring* method.
+   */
+  $(
+    root: keyof Structure,
+    ...path: (string | number)[]
+  ): {
+    /**
+     * Follows the `into()` *ring* on a *chain* and sets a nested validation
+     * into the addressed position of `this.$` data structure.
+     *
+     * It will make the validation fail and skip the rest of *chain* iff
+     * the nested validation already fails.
+     *
+     * --------------------------------
+     * @param validation The nested validation (or validation provider) to be set into
+     *                   the addressed position of `this.$` data structure.
+     * @see `into` *ring* method.
+     */
+    set(validation: Validation<any> | ((data: Data) => Validation<any>)): Validator<Badge, Structure, Data>;
+    /**
+     * Follows the `into()` *ring* on a *chain* and custom value
+     * into the addressed position of `this.$` data structure.
+     *
+     * It won't affect the validity status.
+     *
+     * --------------------------------
+     * @param value The custom value (or value provider) to be set into
+     *              the addressed position of `this.$` data structure.
+     * @see `into` *ring* method.
+     */
+    put(value: any | ((data: Data) => any)): Validator<Badge, Structure, Data>;
+  } {
+    path.unshift(root as string | number);
+    const validator = this;
+    return {
+      set(validation: Validation<any> | ((data: Data) => Validation<any>)): Validator<Badge, Structure, Data> {
+        const validationInstance = typeof validation === 'function' ? validation(validator.data) : validation;
+        validator.set$(path, validationInstance);
+        validator.chain && validator.chain.effects.$.push({ path, value: validationInstance });
+        if (validationInstance.ok) return validator;
+        validator.internal.invalidate();
+        validator.chain && (validator.chain.effects.invalidates = true);
+        return validator.blackhole;
+      },
+      put(value: any | ((data: Data) => any)): Validator<Badge, Structure, Data> {
+        const valueInstance = typeof value === 'function' ? value(validator.data) : value;
+        validator.set$(path, valueInstance);
+        validator.chain && validator.chain.effects.$.push({ path, value: valueInstance });
+        return validator;
+      }
+    };
+  }
+
+  /**
+   *
    */
   end(): undefined {
+    this.chain && Validator.end(this.internal, this.chain.name, this.data);
     return undefined;
   }
 }

@@ -32,9 +32,9 @@ export function matchBadgeGlob<Badge extends string>(badge: Badge, badgeGlob: st
   );
 }
 
-export function getBadgeMessage<Badge extends string>(badge: Badge, ...badgeFailureMessagesArray: BadgeFailureMessages[]): string | undefined {
-  for (let i = 0; i < badgeFailureMessagesArray.length; ++i) {
-    const badgeFailureMessages = badgeFailureMessagesArray[i];
+export function getBadgeMessage<Badge extends string>(badge: Badge, ...badgeFailureMessagesList: BadgeFailureMessages[]): string | undefined {
+  for (let i = 0; i < badgeFailureMessagesList.length; ++i) {
+    const badgeFailureMessages = badgeFailureMessagesList[i];
     if (!badgeFailureMessages) break;
     const badgeGlobs = Object.keys(badgeFailureMessages);
     for (let j = 0; j < badgeGlobs.length; ++j) {
@@ -44,4 +44,35 @@ export function getBadgeMessage<Badge extends string>(badge: Badge, ...badgeFail
     }
   }
   return undefined;
+}
+
+export interface Chain<Badge extends string> {
+  name: string;
+  watches: any[];
+  data: any;
+  effects: {
+    invalidates: boolean;
+    badges: Badge[];
+    errors: { [badge in Badge]?: string };
+    $: {
+      path: (string | number)[];
+      value: any;
+    }[];
+  };
+}
+
+interface Tail {
+  method: string;
+  args: any[];
+}
+
+export interface AsyncHandler {
+  promise: Promise<any>;
+  tail: Tail[];
+}
+
+export interface PendingHandler {
+  names: string[];
+  validator: any;
+  tail: Tail[];
 }
