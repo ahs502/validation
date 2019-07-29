@@ -69,6 +69,7 @@ export default class Validator<Badge extends string, $ extends {}, Data = undefi
     });
     $[path[path.length - 1]] = value;
   }
+
   private static end<Badge extends string, $ extends {}>(internal: Internal<Badge, $>, name: string, data: any): void {
     if (internal.asyncDone) return;
     if (internal.closedChains.includes(name)) throw `Chain ${name} is already closed.`;
@@ -77,6 +78,7 @@ export default class Validator<Badge extends string, $ extends {}, Data = undefi
     for (let i = 0; i < internal.pendingHandlers.length; i++) {
       const pendingHandler = internal.pendingHandlers[i];
       if (!pendingHandler.names.every(name => internal.closedChains.includes(name))) continue;
+      pendingHandler.validator.data = pendingHandler.names.map(name => internal.chains[name].data);
       pendingHandler.tail.forEach(ring => (pendingHandler.validator = pendingHandler.validator[ring.method](...ring.args)));
       internal.pendingHandlers.splice(i--, 1);
     }
@@ -121,6 +123,15 @@ export default class Validator<Badge extends string, $ extends {}, Data = undefi
         }
       })
     );
+  }
+
+  /**
+   *
+   * @param target
+   */
+  with<T extends any>(target: T): Validator<Badge, $, T extends Validation ? undefined : T> {
+    this.data = (target instanceof Validation ? undefined : target) as any;
+    return this as any;
   }
 
   /**
@@ -447,9 +458,9 @@ export default class Validator<Badge extends string, $ extends {}, Data = undefi
    * @see `check` *ring* method.
    * @see `when` *ring* method.
    */
-  then<T>(task: (data: Data) => T): Validator<Badge, $, T extends any ? (T extends Validation ? undefined : T) : any> {
+  then<T>(task: (data: Data) => T): Validator<Badge, $, T extends void | undefined | Validation ? Data : T> {
     const data = task(this.data);
-    this.data = (data instanceof Validation ? undefined : data) as any;
+    this.data = (data instanceof Validation || data === undefined ? this.data : data) as any;
     return this as any;
   }
 
@@ -457,12 +468,10 @@ export default class Validator<Badge extends string, $ extends {}, Data = undefi
    *
    * @param task
    */
-  do<T>(
-    task: (...items: (Data extends readonly (infer I)[] ? I : any)[]) => T
-  ): Validator<Badge, $, T extends any ? (T extends Validation ? undefined : T) : any> {
+  do<T>(task: (...items: (Data extends readonly (infer I)[] ? I : any)[]) => T): Validator<Badge, $, T extends void | undefined | Validation ? Data : T> {
     if (!Array.isArray(this.data)) throw 'The target is not an array.';
     const data = task(...(this.data as any[]));
-    this.data = (data instanceof Validation ? undefined : data) as any;
+    this.data = (data instanceof Validation || data === undefined ? this.data : data) as any;
     return this as any;
   }
 
@@ -545,13 +554,13 @@ export default class Validator<Badge extends string, $ extends {}, Data = undefi
    * @see `check` *ring* method.
    * @see `if` *ring* method.
    */
-  await<T>(promise: Promise<T> | ((data: Data) => Promise<T>)): Validator<Badge, $, T extends any ? (T extends Validation ? undefined : T) : any> {
+  await<T>(promise: Promise<T> | ((data: Data) => Promise<T>)): Validator<Badge, $, T extends void | undefined | Validation ? Data : T> {
     const asyncHandler: AsyncHandler = {
       promise: (typeof promise === 'function' ? promise(this.data) : promise)
         .then(data => {
           if (this.internal.asyncDone) return;
           let validator = this as any;
-          validator.data = data instanceof Validation ? undefined : data;
+          validator.data = data instanceof Validation || data === undefined ? validator.data : data;
           asyncHandler.tail.forEach(ring => (validator = validator[ring.method](...ring.args)));
           this.internal.asyncHandlers.splice(this.internal.asyncHandlers.indexOf(asyncHandler), 1);
           if (this.internal.asyncHandlers.length) return;
