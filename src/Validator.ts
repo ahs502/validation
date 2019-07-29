@@ -34,6 +34,7 @@ export default class Validator<Badge extends string, Structure extends {}, Data 
           if (property === 'else')
             return (task?: () => void) => {
               task && task();
+              validator.data = undefined as any;
               return validator;
             };
           return () => validator.blackhole;
@@ -153,9 +154,9 @@ export default class Validator<Badge extends string, Structure extends {}, Data 
    * @see `do` *ring* method.
    * @see `array` *ring* method.
    */
-  object<T extends any>(target: T): Validator<Badge, Structure, T> {
+  object<T extends any>(target: T): Validator<Badge, Structure, T extends Validation ? undefined : T> {
     if (target && typeof target === 'object' && !Array.isArray(target)) {
-      this.data = target as any;
+      this.data = (target instanceof Validation ? undefined : target) as any;
       return this as any;
     }
     this.internal.invalidate();
@@ -412,9 +413,10 @@ export default class Validator<Badge extends string, Structure extends {}, Data 
    * @see `earn` *ring* method.
    * @see `fail` *ring* method.
    */
-  else(task?: () => void): Validator<Badge, Structure, any> {
+  else(task?: () => void): Validator<Badge, Structure, undefined> {
     // Just bypass task by definition!
-    return this.blackhole;
+    this.data = undefined as any;
+    return this.blackhole as any;
   }
 
   /**
@@ -445,8 +447,9 @@ export default class Validator<Badge extends string, Structure extends {}, Data 
    * @see `check` *ring* method.
    * @see `when` *ring* method.
    */
-  then<T>(task: (data: Data) => T): Validator<Badge, Structure, T extends any ? T : any> {
-    this.data = task(this.data) as any;
+  then<T>(task: (data: Data) => T): Validator<Badge, Structure, T extends any ? (T extends Validation ? undefined : T) : any> {
+    const data = task(this.data);
+    this.data = (data instanceof Validation ? undefined : data) as any;
     return this as any;
   }
 
@@ -454,9 +457,12 @@ export default class Validator<Badge extends string, Structure extends {}, Data 
    *
    * @param task
    */
-  do<T>(task: (...items: (Data extends readonly (infer I)[] ? I : any)[]) => T): Validator<Badge, Structure, T extends any ? T : any> {
+  do<T>(
+    task: (...items: (Data extends readonly (infer I)[] ? I : any)[]) => T
+  ): Validator<Badge, Structure, T extends any ? (T extends Validation ? undefined : T) : any> {
     if (!Array.isArray(this.data)) throw 'The target is not an array.';
-    this.data = task(...(this.data as any[])) as any;
+    const data = task(...(this.data as any[]));
+    this.data = (data instanceof Validation ? undefined : data) as any;
     return this as any;
   }
 
@@ -539,12 +545,13 @@ export default class Validator<Badge extends string, Structure extends {}, Data 
    * @see `check` *ring* method.
    * @see `if` *ring* method.
    */
-  await<T>(promise: Promise<T> | ((data: Data) => Promise<T>)): Validator<Badge, Structure, T extends any ? T : any> {
+  await<T>(promise: Promise<T> | ((data: Data) => Promise<T>)): Validator<Badge, Structure, T extends any ? (T extends Validation ? undefined : T) : any> {
     const asyncHandler: AsyncHandler = {
       promise: (typeof promise === 'function' ? promise(this.data) : promise)
-        .then(() => {
+        .then(data => {
           if (this.internal.asyncDone) return;
           let validator = this as any;
+          validator.data = data instanceof Validation ? undefined : data;
           asyncHandler.tail.forEach(ring => (validator = validator[ring.method](...ring.args)));
           this.internal.asyncHandlers.splice(this.internal.asyncHandlers.indexOf(asyncHandler), 1);
           if (this.internal.asyncHandlers.length) return;
