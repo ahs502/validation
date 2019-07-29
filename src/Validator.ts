@@ -16,7 +16,7 @@ export interface Internal<Badge extends string, Structure extends {}> {
   asyncReject: (reason?: any) => void;
 }
 
-export default class Validator<Badge extends string, Structure extends {}, Data extends any> {
+export default class Validator<Badge extends string, Structure extends {}, Data = undefined> {
   private readonly internal: Internal<Badge, Structure>;
   private readonly blackhole: this;
   private readonly chain?: Chain<Badge>;
@@ -87,7 +87,7 @@ export default class Validator<Badge extends string, Structure extends {}, Data 
    * @param name
    * @param watches
    */
-  in(name: string, ...watches: any[]): Validator<Badge, Structure, any> {
+  in(name: string, ...watches: any[]): Validator<Badge, Structure> {
     if (this.chain) throw `Chain '${this.chain.name}' is already openned.`;
     if (this.internal.openedChains.includes(name)) throw `Chain ${name} already exists.`;
 
@@ -413,7 +413,7 @@ export default class Validator<Badge extends string, Structure extends {}, Data 
    * @see `earn` *ring* method.
    * @see `fail` *ring* method.
    */
-  else(task?: () => void): Validator<Badge, Structure, undefined> {
+  else(task?: () => void): Validator<Badge, Structure> {
     // Just bypass task by definition!
     this.data = undefined as any;
     return this.blackhole as any;
@@ -590,7 +590,7 @@ export default class Validator<Badge extends string, Structure extends {}, Data 
    *
    * @param names
    */
-  after(...names: string[]): Validator<Badge, Structure, any[]> {
+  after<T extends any[] = any[]>(...names: string[]): Validator<Badge, Structure, T> {
     if (names.every(name => this.internal.closedChains.includes(name))) {
       this.data = names.map(name => this.internal.chains[name].data) as any;
       return this as any;

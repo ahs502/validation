@@ -233,17 +233,17 @@ export default abstract class Validation<Badge extends string = string, Structur
    * @see `badgeFailureMessages` property.
    */
   protected constructor(
-    validate: (validator: Validator<Badge, Structure, any>, validation: Validation<Badge, Structure>) => void,
+    validate: (validator: Validator<Badge, Structure>, validation: Validation<Badge, Structure>) => void,
     badgeFailureMessages?: BadgeFailureMessages
   );
   protected constructor(
     previousValidation: Validation<Badge, Structure>,
-    validate: (validator: Validator<Badge, Structure, any>, validation: Validation<Badge, Structure>) => void,
+    validate: (validator: Validator<Badge, Structure>, validation: Validation<Badge, Structure>) => void,
     badgeFailureMessages?: BadgeFailureMessages
   );
   protected constructor(...parameters: any[]) {
     let previousValidation: Validation<Badge, Structure> | undefined,
-      validate: (validator: Validator<Badge, Structure, any>, validation: Validation<Badge, Structure>) => void,
+      validate: (validator: Validator<Badge, Structure>, validation: Validation<Badge, Structure>) => void,
       badgeFailureMessages: BadgeFailureMessages | undefined;
     if (typeof parameters[0] === 'function') {
       previousValidation = undefined;
