@@ -11,7 +11,7 @@ export { BadgeFailureMessages } from './utils';
  * - `Badge`: The type of all *badge*s involved with this validation.
  *   Should extend `string`, by default is `string`, can also be `never` but
  *   usually is a **`string` literal type** listing all related badges.
- * - `Structure`: The type of the internal data structure used for nested
+ * - `$`: The type of the internal data structure used for nested
  *   complex data type validations. Should extend `{}` and by default is `{}`.
  *
  * --------------------------------
@@ -40,7 +40,7 @@ export { BadgeFailureMessages } from './utils';
  *    }
  *
  */
-export default abstract class Validation<Badge extends string = string, Structure extends {} = {}> {
+export default abstract class Validation<Badge extends string = string, $ extends {} = {}> {
   /**
    * The overall validity status *(Considering all the nested validation too)*.
    *
@@ -89,7 +89,7 @@ export default abstract class Validation<Badge extends string = string, Structur
    * --------------------------------
    * @see `async` property.
    */
-  readonly $: Structure;
+  readonly $: $;
 
   /**
    * The list of all earned badges during validation process.
@@ -207,7 +207,7 @@ export default abstract class Validation<Badge extends string = string, Structur
    */
   static defaultBadgeFailureMessages: BadgeFailureMessages = {};
 
-  private readonly internal!: Internal<Badge, Structure>;
+  private readonly internal!: Internal<Badge, $>;
 
   /**
    * Defines the validation and how to validate data.
@@ -232,18 +232,15 @@ export default abstract class Validation<Badge extends string = string, Structur
    * @param badgeFailureMessages Optional, the default error messages for failed badge of this validation.
    * @see `badgeFailureMessages` property.
    */
+  protected constructor(validate: (validator: Validator<Badge, $>, validation: Validation<Badge, $>) => void, badgeFailureMessages?: BadgeFailureMessages);
   protected constructor(
-    validate: (validator: Validator<Badge, Structure>, validation: Validation<Badge, Structure>) => void,
-    badgeFailureMessages?: BadgeFailureMessages
-  );
-  protected constructor(
-    previousValidation: Validation<Badge, Structure>,
-    validate: (validator: Validator<Badge, Structure>, validation: Validation<Badge, Structure>) => void,
+    previousValidation: Validation<Badge, $>,
+    validate: (validator: Validator<Badge, $>, validation: Validation<Badge, $>) => void,
     badgeFailureMessages?: BadgeFailureMessages
   );
   protected constructor(...parameters: any[]) {
-    let previousValidation: Validation<Badge, Structure> | undefined,
-      validate: (validator: Validator<Badge, Structure>, validation: Validation<Badge, Structure>) => void,
+    let previousValidation: Validation<Badge, $> | undefined,
+      validate: (validator: Validator<Badge, $>, validation: Validation<Badge, $>) => void,
       badgeFailureMessages: BadgeFailureMessages | undefined;
     if (typeof parameters[0] === 'function') {
       previousValidation = undefined;
@@ -254,14 +251,14 @@ export default abstract class Validation<Badge extends string = string, Structur
     }
 
     this.ok = true;
-    this.$ = {} as Structure;
+    this.$ = {} as $;
     this.badges = [];
     this.errors = {};
 
     this.badgeFailureMessages = badgeFailureMessages || {};
 
     this.async = new Promise((resolve, reject) => {
-      ((this as unknown) as { internal: Internal<Badge, Structure> }).internal = {
+      ((this as unknown) as { internal: Internal<Badge, $> }).internal = {
         validation: this,
         invalidate: () => ((this as { ok: boolean }).ok = false),
         badges: this.badges as Badge[],
@@ -459,4 +456,4 @@ export default abstract class Validation<Badge extends string = string, Structur
   }
 }
 
-export class StructuralValidation<Structure extends {} = {}> extends Validation<'', Structure> {}
+export class StructuralValidation<$ extends {} = {}> extends Validation<'', $> {}

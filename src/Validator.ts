@@ -1,8 +1,8 @@
 import Validation from './Validation';
 import { getBadgeMessage, Chain, AsyncHandler, PendingHandler } from './utils';
 
-export interface Internal<Badge extends string, Structure extends {}> {
-  validation: Validation<Badge, Structure>;
+export interface Internal<Badge extends string, $ extends {}> {
+  validation: Validation<Badge, $>;
   invalidate: () => void;
   badges: Badge[];
   errors: { [badge in Badge]?: string };
@@ -16,14 +16,14 @@ export interface Internal<Badge extends string, Structure extends {}> {
   asyncReject: (reason?: any) => void;
 }
 
-export default class Validator<Badge extends string, Structure extends {}, Data = undefined> {
-  private readonly internal: Internal<Badge, Structure>;
+export default class Validator<Badge extends string, $ extends {}, Data = undefined> {
+  private readonly internal: Internal<Badge, $>;
   private readonly blackhole: this;
   private readonly chain?: Chain<Badge>;
 
   private data: Data;
 
-  constructor(internal: Internal<Badge, Structure>, chain?: Chain<Badge>) {
+  constructor(internal: Internal<Badge, $>, chain?: Chain<Badge>) {
     const validator = this;
     this.internal = internal;
     this.blackhole = new Proxy(
@@ -69,7 +69,7 @@ export default class Validator<Badge extends string, Structure extends {}, Data 
     });
     $[path[path.length - 1]] = value;
   }
-  private static end<Badge extends string, Structure extends {}>(internal: Internal<Badge, Structure>, name: string, data: any): void {
+  private static end<Badge extends string, $ extends {}>(internal: Internal<Badge, $>, name: string, data: any): void {
     if (internal.asyncDone) return;
     if (internal.closedChains.includes(name)) throw `Chain ${name} is already closed.`;
     internal.closedChains.push(name);
@@ -87,7 +87,7 @@ export default class Validator<Badge extends string, Structure extends {}, Data 
    * @param name
    * @param watches
    */
-  in(name: string, ...watches: any[]): Validator<Badge, Structure> {
+  in(name: string, ...watches: any[]): Validator<Badge, $> {
     if (this.chain) throw `Chain '${this.chain.name}' is already openned.`;
     if (this.internal.openedChains.includes(name)) throw `Chain ${name} already exists.`;
 
@@ -154,7 +154,7 @@ export default class Validator<Badge extends string, Structure extends {}, Data 
    * @see `do` *ring* method.
    * @see `array` *ring* method.
    */
-  object<T extends any>(target: T): Validator<Badge, Structure, T extends Validation ? undefined : T> {
+  object<T extends any>(target: T): Validator<Badge, $, T extends Validation ? undefined : T> {
     if (target && typeof target === 'object' && !Array.isArray(target)) {
       this.data = (target instanceof Validation ? undefined : target) as any;
       return this as any;
@@ -199,7 +199,7 @@ export default class Validator<Badge extends string, Structure extends {}, Data 
    * @see `object` *ring* method.
    * @see `into` *ring* method.
    */
-  array<T extends any>(target: T): Validator<Badge, Structure, T> {
+  array<T extends any>(target: T): Validator<Badge, $, T> {
     if (target && Array.isArray(target)) {
       this.data = target as any;
       return this as any;
@@ -413,7 +413,7 @@ export default class Validator<Badge extends string, Structure extends {}, Data 
    * @see `earn` *ring* method.
    * @see `fail` *ring* method.
    */
-  else(task?: () => void): Validator<Badge, Structure> {
+  else(task?: () => void): Validator<Badge, $> {
     // Just bypass task by definition!
     this.data = undefined as any;
     return this.blackhole as any;
@@ -447,7 +447,7 @@ export default class Validator<Badge extends string, Structure extends {}, Data 
    * @see `check` *ring* method.
    * @see `when` *ring* method.
    */
-  then<T>(task: (data: Data) => T): Validator<Badge, Structure, T extends any ? (T extends Validation ? undefined : T) : any> {
+  then<T>(task: (data: Data) => T): Validator<Badge, $, T extends any ? (T extends Validation ? undefined : T) : any> {
     const data = task(this.data);
     this.data = (data instanceof Validation ? undefined : data) as any;
     return this as any;
@@ -459,7 +459,7 @@ export default class Validator<Badge extends string, Structure extends {}, Data 
    */
   do<T>(
     task: (...items: (Data extends readonly (infer I)[] ? I : any)[]) => T
-  ): Validator<Badge, Structure, T extends any ? (T extends Validation ? undefined : T) : any> {
+  ): Validator<Badge, $, T extends any ? (T extends Validation ? undefined : T) : any> {
     if (!Array.isArray(this.data)) throw 'The target is not an array.';
     const data = task(...(this.data as any[]));
     this.data = (data instanceof Validation ? undefined : data) as any;
@@ -545,7 +545,7 @@ export default class Validator<Badge extends string, Structure extends {}, Data 
    * @see `check` *ring* method.
    * @see `if` *ring* method.
    */
-  await<T>(promise: Promise<T> | ((data: Data) => Promise<T>)): Validator<Badge, Structure, T extends any ? (T extends Validation ? undefined : T) : any> {
+  await<T>(promise: Promise<T> | ((data: Data) => Promise<T>)): Validator<Badge, $, T extends any ? (T extends Validation ? undefined : T) : any> {
     const asyncHandler: AsyncHandler = {
       promise: (typeof promise === 'function' ? promise(this.data) : promise)
         .then(data => {
@@ -590,7 +590,7 @@ export default class Validator<Badge extends string, Structure extends {}, Data 
    *
    * @param names
    */
-  after<T extends any[] = any[]>(...names: string[]): Validator<Badge, Structure, T> {
+  after<T extends any[] = any[]>(...names: string[]): Validator<Badge, $, T> {
     if (names.every(name => this.internal.closedChains.includes(name))) {
       this.data = names.map(name => this.internal.chains[name].data) as any;
       return this as any;
@@ -671,7 +671,7 @@ export default class Validator<Badge extends string, Structure extends {}, Data 
    * @see `array` *ring* method.
    */
   $(
-    root: keyof Structure,
+    root: keyof $,
     ...path: (string | number)[]
   ): {
     /**
@@ -686,7 +686,7 @@ export default class Validator<Badge extends string, Structure extends {}, Data 
      *                   the addressed position of `this.$` data structure.
      * @see `into` *ring* method.
      */
-    set(validation: Validation<any> | ((data: Data) => Validation<any>)): Validator<Badge, Structure, Data>;
+    set(validation: Validation<any> | ((data: Data) => Validation<any>)): Validator<Badge, $, Data>;
     /**
      * Follows the `into()` *ring* on a *chain* and custom value
      * into the addressed position of `this.$` data structure.
@@ -698,12 +698,12 @@ export default class Validator<Badge extends string, Structure extends {}, Data 
      *              the addressed position of `this.$` data structure.
      * @see `into` *ring* method.
      */
-    put(value: any | ((data: Data) => any)): Validator<Badge, Structure, Data>;
+    put(value: any | ((data: Data) => any)): Validator<Badge, $, Data>;
   } {
     path.unshift(root as string | number);
     const validator = this;
     return {
-      set(validation: Validation<any> | ((data: Data) => Validation<any>)): Validator<Badge, Structure, Data> {
+      set(validation: Validation<any> | ((data: Data) => Validation<any>)): Validator<Badge, $, Data> {
         const validationInstance = typeof validation === 'function' ? validation(validator.data) : validation;
         validator.set$(path, validationInstance);
         validator.chain && validator.chain.effects.$.push({ path, value: validationInstance });
@@ -712,7 +712,7 @@ export default class Validator<Badge extends string, Structure extends {}, Data 
         validator.chain && (validator.chain.effects.invalidates = true);
         return validator.blackhole;
       },
-      put(value: any | ((data: Data) => any)): Validator<Badge, Structure, Data> {
+      put(value: any | ((data: Data) => any)): Validator<Badge, $, Data> {
         const valueInstance = typeof value === 'function' ? value(validator.data) : value;
         validator.set$(path, valueInstance);
         validator.chain && validator.chain.effects.$.push({ path, value: valueInstance });
