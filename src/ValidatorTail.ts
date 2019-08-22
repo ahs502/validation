@@ -6,6 +6,7 @@ import Validator from './Validator';
 import Validation from './Validation';
 
 export default class ValidatorTail<Badge extends string, $ extends $Base, Data> /*implements Validator<Badge, $, Data>*/ {
+  private index: number;
   private data: Data = undefined as any;
   private unsafe: boolean | undefined = undefined;
   private promise?: Promise<void>;
@@ -13,6 +14,7 @@ export default class ValidatorTail<Badge extends string, $ extends $Base, Data> 
   private chain?: Chain<Badge>;
 
   constructor(private readonly internal: Internal<Badge, $>, private readonly original: boolean = false) {
+    this.index = internal.counter++;
     this.chain = internal.currentChain;
   }
 
@@ -336,7 +338,7 @@ export default class ValidatorTail<Badge extends string, $ extends $Base, Data> 
 
   private asynchronize(task: () => any) {
     if (this.promise)
-      return (this.promise = this.promise
+      return (this.promise = this.internal.promises[this.index] = this.promise
         .then(() => {
           if (this.internal.done || this.bypass) return;
           return task();
@@ -348,7 +350,7 @@ export default class ValidatorTail<Badge extends string, $ extends $Base, Data> 
         }));
     const result = task();
     result instanceof Promise &&
-      (this.promise = result.catch(reason => {
+      (this.promise = this.internal.promises[this.index] = result.catch(reason => {
         if (this.internal.done) return;
         this.internal.done = true;
         this.internal.asyncReject(reason);

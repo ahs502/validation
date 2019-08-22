@@ -42,7 +42,7 @@ export default class ValidatorMock implements Validator<'', {}, {}> {
   if(): any {
     return this;
   }
-  put(): any {
+  set(): any {
     return this;
   }
   get(): any {

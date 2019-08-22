@@ -262,6 +262,7 @@ export default abstract class Validation<Badge extends string = string, $ extend
 
     this.async = new Promise((resolve, reject) => {
       ((this as unknown) as { internal: Internal<Badge, $> }).internal = {
+        counter: 0,
         invalidate: () => ((this as { ok: boolean }).ok = false),
         badges: this.badges as Badge[],
         errors: this.errors as { [badge in Badge]?: string },
@@ -273,7 +274,7 @@ export default abstract class Validation<Badge extends string = string, $ extend
         closedChains: [],
         currentChain: undefined,
         done: false,
-        exception: undefined,
+        promises: {},
         asyncResolve: resolve,
         asyncReject: reject
       };
@@ -283,12 +284,22 @@ export default abstract class Validation<Badge extends string = string, $ extend
           .forEach(name => (this.internal.chains[name] = previousValidation!.internal.chains[name])),
         previousValidation.dispose());
 
-      validate(new ValidatorBase(this.internal));
+      validate(new ValidatorBase(this.internal) as any);
 
-      if (!this.internal.asyncHandlers.length) {
-        this.internal.asyncDone = true;
-        this.internal.asyncResolve();
-      }
+      const internal = this.internal;
+      (function handlePromises() {
+        const promises = Object.values(internal.promises);
+        if (promises.length === 0) {
+          internal.done = true;
+          resolve();
+          return;
+        }
+        internal.promises = {};
+        Promise.all(promises).then(handlePromises, reason => {
+          internal.done = true;
+          reject(reason);
+        });
+      })();
     });
   }
 

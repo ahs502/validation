@@ -3,6 +3,7 @@ import BadgeFailureMessages from './BadgeFailureMessages';
 import Chain from './Chain';
 
 export default interface Internal<Badge extends string, $ extends $Base> {
+  counter: number;
   invalidate: () => void;
   badges: Badge[];
   errors: { [badge in Badge]?: string };
@@ -14,7 +15,7 @@ export default interface Internal<Badge extends string, $ extends $Base> {
   closedChains: string[];
   currentChain?: Chain<Badge>;
   done: boolean;
-  exception?: string;
+  promises: { [index: number]: Promise<void> };
   asyncResolve: (value?: any) => void;
   asyncReject: (reason?: any) => void;
 }
