@@ -1,3 +1,7 @@
+export default interface BadgeFailureMessages {
+  readonly [badgeGlob: string]: string;
+}
+
 export function matchBadgeGlob<Badge extends string>(badge: Badge, badgeGlob: string): boolean {
   return (
     badgeGlob === badge ||
@@ -7,7 +11,7 @@ export function matchBadgeGlob<Badge extends string>(badge: Badge, badgeGlob: st
   );
 }
 
-export function getBadgeMessage<Badge extends string>(badge: Badge, ...badgeFailureMessagesList: BadgeFailureMessages[]): string | undefined {
+export function getBadgeFailureMessage<Badge extends string>(badge: Badge, ...badgeFailureMessagesList: BadgeFailureMessages[]): string | undefined {
   for (let i = 0; i < badgeFailureMessagesList.length; ++i) {
     const badgeFailureMessages = badgeFailureMessagesList[i];
     if (!badgeFailureMessages) break;
