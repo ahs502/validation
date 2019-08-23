@@ -16,6 +16,6 @@ export default interface Internal<Badge extends string, $ extends $Base> {
   currentChain?: Chain<Badge>;
   done: boolean;
   promises: { [index: number]: Promise<void> };
-  asyncResolve: (value?: any) => void;
-  asyncReject: (reason?: any) => void;
+  resolve: () => void;
+  reject: (reason: any) => void;
 }

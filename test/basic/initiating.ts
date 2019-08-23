@@ -1,7 +1,7 @@
 import Validation from '../../src/Validation';
 
 describe('Validation', () => {
-  describe('initiating functionalities', () => {
+  describe('initiating', () => {
     class MyValidation extends Validation {
       constructor() {
         super(() => {
@@ -24,6 +24,8 @@ describe('Validation', () => {
       const validation = new MyValidation();
       expect(validation.badges.length).toBe(0);
       expect(validation.failedBadges.length).toBe(0);
+      expect(validation.errors).toEqual({});
+      expect(validation.has()).toBe(true);
     });
 
     it('should have no initial error messages.', () => {
@@ -40,12 +42,14 @@ describe('Validation', () => {
     it('should get resolved without errors and change in results.', async () => {
       const validation = new MyValidation();
       await validation.async;
+      expect(validation.ok).toBe(true);
     });
 
-    it('should get disposed successfully and still get resolved.', async () => {
+    it('should get disposed successfully without any change in result due to it is synchronous.', async () => {
       const validation = new MyValidation();
       validation.dispose();
       await validation.async;
+      expect(validation.ok).toBe(true);
     });
   });
 });

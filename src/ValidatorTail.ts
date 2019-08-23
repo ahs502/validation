@@ -72,7 +72,7 @@ export default class ValidatorTail<Badge extends string, $ extends $Base, Data> 
   }
 
   each<T>(
-    task: Data extends readonly (infer I)[] ? (item: I, index: number) => T | Promise<T> | ValidatorTail<Badge, $, T> : never
+    task: Data extends readonly (infer I)[] ? (item: I, index: number, data: Data) => T | Promise<T> | ValidatorTail<Badge, $, T> : never
   ): ValidatorTail<Badge, $, T[]> {
     if (this.internal.done || (this.unsafe === false && (this.unsafe = true), this.bypass)) return this as any;
 
@@ -85,7 +85,7 @@ export default class ValidatorTail<Badge extends string, $ extends $Base, Data> 
     this.asynchronize(() => {
       if (!this.data || !Array.isArray(this.data)) throw 'Can not iterate on empty or non-array objects.';
       const result = this.data.map((item, index) => {
-        const r = task(item, index);
+        const r = task(item, index, this.data);
         if (r instanceof ValidatorTail) return r.provide();
         return r;
       });
@@ -120,7 +120,7 @@ export default class ValidatorTail<Badge extends string, $ extends $Base, Data> 
     return this as any;
   }
 
-  object<T = Data>(target?: T | Promise<T>): ValidatorTail<Badge, $, T> {
+  object<T = Data>(target: T | Promise<T>): ValidatorTail<Badge, $, T> {
     if (this.internal.done || (this.unsafe === false && (this.unsafe = true), this.unsafe === undefined && (this.unsafe = false), this.bypass))
       return this as any;
 
@@ -135,14 +135,12 @@ export default class ValidatorTail<Badge extends string, $ extends $Base, Data> 
       }
     }
 
-    this.asynchronize(() =>
-      arguments.length === 0 ? action(this.data) : target instanceof Promise ? target.then(data => this.internal.done || action(data)) : action(target)
-    );
+    this.asynchronize(() => (target instanceof Promise ? target.then(data => this.internal.done || action(data)) : action(target)));
 
     return this as any;
   }
 
-  array<T = Data>(target?: T | Promise<T>): ValidatorTail<Badge, $, T> {
+  array<T = Data>(target: T | Promise<T>): ValidatorTail<Badge, $, T> {
     if (this.internal.done || (this.unsafe === false && (this.unsafe = true), this.unsafe === undefined && (this.unsafe = false), this.bypass))
       return this as any;
 
@@ -157,9 +155,7 @@ export default class ValidatorTail<Badge extends string, $ extends $Base, Data> 
       }
     }
 
-    this.asynchronize(() =>
-      arguments.length === 0 ? action(this.data) : target instanceof Promise ? target.then(data => this.internal.done || action(data)) : action(target)
-    );
+    this.asynchronize(() => (target instanceof Promise ? target.then(data => this.internal.done || action(data)) : action(target)));
 
     return this as any;
   }
@@ -301,7 +297,7 @@ export default class ValidatorTail<Badge extends string, $ extends $Base, Data> 
     return this as any;
   }
 
-  get<T, D>($path: T, task?: (value: T) => D | Promise<D>): ValidatorTail<Badge, $, D> {
+  get<T, D>($path: T, task?: (value: T, data: Data) => D | Promise<D>): ValidatorTail<Badge, $, D> {
     if (this.internal.done || (this.unsafe === false && (this.unsafe = true), this.bypass)) return this as any;
 
     const validator = this,
@@ -313,7 +309,7 @@ export default class ValidatorTail<Badge extends string, $ extends $Base, Data> 
 
     this.asynchronize(() => {
       const given = get$(this.internal.$, path);
-      const result = arguments.length > 1 && task ? task(given) : given;
+      const result = arguments.length > 1 && task ? task(given, this.data) : given;
       return result instanceof Promise ? result.then(data => this.internal.done || action(data)) : action(result);
     });
 
@@ -324,14 +320,13 @@ export default class ValidatorTail<Badge extends string, $ extends $Base, Data> 
     if (!this.original) throw 'Only the named chains can be finished.';
     if (this.internal.done) return Promise.resolve(null) as any;
 
-    if (this.promise) {
-      const validator = this;
-      return this.promise.then(() => {
-        if (validator.internal.done) return Promise.resolve(null) as any;
-        validator.chain && ((validator.chain.data = validator.data), validator.internal.closedChains.push(validator.chain.name));
-        return validator.data;
-      });
-    }
+    if (this.promise)
+      return (this.internal.promises[this.index] = this.promise.then(() => {
+        if (this.internal.done) return Promise.resolve(null) as any;
+        this.chain && ((this.chain.data = this.data), this.internal.closedChains.push(this.chain.name));
+        return this.data;
+      }));
+
     this.chain && ((this.chain.data = this.data), this.internal.closedChains.push(this.chain.name));
     return Promise.resolve(this.data);
   }
@@ -343,18 +338,9 @@ export default class ValidatorTail<Badge extends string, $ extends $Base, Data> 
           if (this.internal.done || this.bypass) return;
           return task();
         })
-        .catch(reason => {
-          if (this.internal.done) return;
-          this.internal.done = true;
-          this.internal.asyncReject(reason);
-        }));
+        .catch(this.internal.reject));
     const result = task();
-    result instanceof Promise &&
-      (this.promise = this.internal.promises[this.index] = result.catch(reason => {
-        if (this.internal.done) return;
-        this.internal.done = true;
-        this.internal.asyncReject(reason);
-      }));
+    result instanceof Promise && (this.promise = this.internal.promises[this.index] = result.catch(this.internal.reject));
   }
 
   private provide(): Data | Promise<Data> {

@@ -1,4 +1,4 @@
-import { $Base } from './$';
+import { $Base, traverse$ } from './$';
 import BadgeFailureMessages, { matchBadgeGlob } from './BadgeFailureMessages';
 import Internal from './Internal';
 import ValidatorSeed from './ValidatorSeed';
@@ -58,7 +58,7 @@ export default abstract class Validation<Badge extends string = string, $ extend
    * --------------------------------
    * @see `async` property.
    */
-  readonly ok: boolean;
+  readonly ok?: boolean;
 
   /**
    * The internal data structure used for nested validation for complext data.
@@ -149,7 +149,7 @@ export default abstract class Validation<Badge extends string = string, $ extend
    * --------------------------------
    * @see `await` method from `Validator` class.
    */
-  readonly async: Promise<any>;
+  readonly async: Promise<boolean>;
 
   /**
    * The default error messages for failed badge of this validation,
@@ -261,7 +261,7 @@ export default abstract class Validation<Badge extends string = string, $ extend
     this.badgeFailureMessages = badgeFailureMessages || {};
 
     this.async = new Promise((resolve, reject) => {
-      ((this as unknown) as { internal: Internal<Badge, $> }).internal = {
+      const internal: Internal<Badge, $> = ((this as any).internal = {
         counter: 0,
         invalidate: () => ((this as { ok: boolean }).ok = false),
         badges: this.badges as Badge[],
@@ -275,55 +275,35 @@ export default abstract class Validation<Badge extends string = string, $ extend
         currentChain: undefined,
         done: false,
         promises: {},
-        asyncResolve: resolve,
-        asyncReject: reject
-      };
+        resolve: () => {
+          if (internal.done) return;
+          internal.done = true;
+          resolve(this.ok);
+        },
+        reject: reason => {
+          if (internal.done) return;
+          internal.done = true;
+          delete (this as any).ok;
+          reject(reason);
+        }
+      });
       previousValidation &&
         (Object.keys(previousValidation.internal.chains)
           .filter(name => !previousValidation!.internal.openedChains.includes(name) || previousValidation!.internal.closedChains.includes(name))
-          .forEach(name => (this.internal.chains[name] = previousValidation!.internal.chains[name])),
+          .forEach(name => (internal.chains[name] = previousValidation!.internal.chains[name])),
         previousValidation.dispose());
-
-      validate(new ValidatorBase(this.internal) as any);
-
-      const internal = this.internal;
-      (function handlePromises() {
-        const promises = Object.values(internal.promises);
-        if (promises.length === 0) {
-          internal.done = true;
-          resolve();
-          return;
-        }
-        internal.promises = {};
-        Promise.all(promises).then(handlePromises, reason => {
-          internal.done = true;
-          reject(reason);
-        });
-      })();
     });
-  }
 
-  /**
-   * Traverses through all validations inside `this.$` data structure.
-   *
-   * --------------------------------
-   * @param task The task to be applied to all validations, may return `true` to break traversing.
-   */
-  private traverse(task: (validation: Validation<any>) => boolean): void {
-    (function traverseItem(item: any): boolean {
-      if (!item) return false;
-      if (item instanceof Validation) return task(item);
-      if (Array.isArray(item)) {
-        for (let index = 0; index < item.length; ++index) {
-          if (traverseItem(item[index])) return true;
-        }
-      } else if (typeof item === 'object') {
-        for (const key in item) {
-          if (traverseItem(item[key])) return true;
-        }
-      }
-      return false;
-    })(this.$);
+    const internal = this.internal;
+
+    validate(new ValidatorBase(internal) as any);
+
+    (function handlePromises() {
+      const promises = Object.values(internal.promises);
+      if (promises.length === 0) return internal.resolve();
+      internal.promises = {};
+      return Promise.all(promises).then(handlePromises, internal.reject);
+    })();
   }
 
   /**
@@ -457,7 +437,7 @@ export default abstract class Validation<Badge extends string = string, $ extend
     if (this.ok) return;
     let message = this.message();
     if (message) throw message;
-    this.traverse(validation => ((message = validation.message()), !!message));
+    traverse$(this.$, validation => ((message = validation.message()), !!message));
     if (message) throw message;
     throw defaultMessage || '';
   }
@@ -468,7 +448,7 @@ export default abstract class Validation<Badge extends string = string, $ extend
   dispose(message: string = 'disposed'): void {
     if (this.internal.done) return;
     this.internal.done = true;
-    this.internal.asyncReject(message);
+    this.internal.reject(message);
   }
 }
 

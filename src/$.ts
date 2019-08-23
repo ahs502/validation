@@ -1,3 +1,5 @@
+import Validation from './Validation';
+
 export type $Field = string | number | boolean | bigint | Date; //TODO: Add more basic values;
 type $Recursive = $Field | { [key: string]: $Recursive } | $Array;
 interface $Array extends ReadonlyArray<$Recursive> {}
@@ -25,4 +27,21 @@ function approach$($: any, path: $Path): [any, $Step] {
     $ = $[property];
   });
   return [$, path[path.length - 1]];
+}
+
+export function traverse$($: any, task: (validation: Validation<any>) => boolean): void {
+  (function traverseItem(item: any): boolean {
+    if (!item) return false;
+    if (item instanceof Validation) return task(item);
+    if (Array.isArray(item)) {
+      for (let index = 0; index < item.length; ++index) {
+        if (traverseItem(item[index])) return true;
+      }
+    } else if (typeof item === 'object') {
+      for (const key in item) {
+        if (traverseItem(item[key])) return true;
+      }
+    }
+    return false;
+  })($);
 }
