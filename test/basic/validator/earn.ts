@@ -133,5 +133,29 @@ describe('Validator', () => {
         expect(validation.ok).toBe(true);
       });
     });
+
+    it('should get bypassed correctly', () => {
+      class EarnValidation extends Validation<'A'> {
+        constructor() {
+          super(validator => validator.must(false).earn('A'));
+        }
+      }
+
+      const validation = new EarnValidation();
+      expect(validation.badges).toEqual([]);
+    });
+
+    it('should work async correctly', async () => {
+      class EarnValidation extends Validation<'A'> {
+        constructor() {
+          super(validator => validator.with(Promise.resolve()).earn('A'));
+        }
+      }
+
+      const validation = new EarnValidation();
+      expect(validation.badges).toEqual([]);
+      await validation.async;
+      expect(validation.badges).toEqual(['A']);
+    });
   });
 });

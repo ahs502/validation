@@ -155,5 +155,29 @@ describe('Validator', () => {
         expect(validation.ok).toBe(false);
       });
     });
+
+    it('should get bypassed correctly', () => {
+      class FailValidation extends Validation<'A'> {
+        constructor() {
+          super(validator => validator.must(false).fail('A'));
+        }
+      }
+
+      const validation = new FailValidation();
+      expect(validation.failedBadges).toEqual([]);
+    });
+
+    it('should work async correctly', async () => {
+      class FailValidation extends Validation<'A'> {
+        constructor() {
+          super(validator => validator.with(Promise.resolve()).fail('A'));
+        }
+      }
+
+      const validation = new FailValidation();
+      expect(validation.failedBadges).toEqual([]);
+      await validation.async;
+      expect(validation.failedBadges).toEqual(['A']);
+    });
   });
 });
