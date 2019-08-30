@@ -232,14 +232,14 @@ export default abstract class Validation<Badge extends string = string, $ extend
    * @param badgeFailureMessages Optional, the default error messages for failed badge of this validation.
    * @see `badgeFailureMessages` property.
    */
-  protected constructor(validate: (validator: ValidatorSeed<Badge, $>, validation: Validation<Badge, $>) => void, badgeFailureMessages?: BadgeFailureMessages);
+  protected constructor(validate: (validator: ValidatorSeed<Badge, $>) => void, badgeFailureMessages?: BadgeFailureMessages);
   protected constructor(
-    validate: (validator: ValidatorSeed<Badge, $>, validation: Validation<Badge, $>) => void,
+    validate: (validator: ValidatorSeed<Badge, $>) => void,
     previousValidation?: Validation<Badge, $>,
     badgeFailureMessages?: BadgeFailureMessages
   );
   protected constructor(...parameters: any[]) {
-    let validate: (validator: ValidatorSeed<Badge, $>, validation: Validation<Badge, $>) => void,
+    let validate: (validator: ValidatorSeed<Badge, $>) => void,
       previousValidation: Validation<Badge, $> | undefined,
       badgeFailureMessages: BadgeFailureMessages | undefined;
     if (parameters[1] instanceof Validation) {
@@ -296,7 +296,7 @@ export default abstract class Validation<Badge extends string = string, $ extend
 
     const internal = this.internal;
 
-    validate(new ValidatorBase(internal) as any, this);
+    validate(new ValidatorBase(internal) as any);
 
     (function handlePromises() {
       const promises = Object.values(internal.promises);

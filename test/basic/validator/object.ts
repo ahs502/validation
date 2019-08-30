@@ -3,10 +3,10 @@ import Validation from '../../../src/Validation';
 describe('Validator', () => {
   describe('object chain', () => {
     describe('basic functionality', () => {
+      let result: any;
       class ObjectValidation extends Validation<'A'> {
-        data: any;
         constructor(data: any) {
-          super((validator, validation) => ((validation as ObjectValidation).data = validator.object(data).earn('A').value));
+          super(validator => (result = validator.object(data).earn('A').value));
         }
       }
 
@@ -30,22 +30,23 @@ describe('Validator', () => {
         ${{}}                  | ${true}
         ${{ a: 1, b: 2 }}      | ${true}
       `('should provide $data anyway, continue the chain for JSON-like objects and block it and invalidate otherwise', ({ data, ok }) => {
+        result = undefined;
         const validation = new ObjectValidation(data);
         expect(validation.ok).toBe(ok);
-        expect(validation.data).toBe(data);
+        expect(result).toBe(data);
         expect(validation.badges).toEqual(ok ? ['A'] : []);
       });
     });
 
     describe('basic functionality with promises', () => {
+      let result: any;
       class ObjectValidation extends Validation<'A'> {
-        data: any = undefined;
         constructor(data: any) {
-          super((validator, validation) =>
+          super(validator =>
             validator
               .object(Promise.resolve(data))
               .earn('A')
-              .value.then(feed => ((validation as ObjectValidation).data = feed))
+              .value.then(feed => (result = feed))
           );
         }
       }
@@ -70,28 +71,29 @@ describe('Validator', () => {
         ${{}}                  | ${true}
         ${{ a: 1, b: 2 }}      | ${true}
       `('should provide $data anyway, continue the chain for JSON-like objects and block it and invalidate otherwise', async ({ data, ok }) => {
+        result = undefined;
         const validation = new ObjectValidation(data);
         expect(validation.ok).toBe(true);
-        expect(validation.data).toBe(undefined);
+        expect(result).toBe(undefined);
         expect(validation.badges).toEqual([]);
         await validation.async;
         expect(validation.ok).toBe(ok);
-        expect(validation.data).toBe(data);
+        expect(result).toBe(data);
         expect(validation.badges).toEqual(ok ? ['A'] : []);
       });
     });
 
     it('should get bypassed correctly', () => {
+      let result: any;
       class ObjectValidation extends Validation {
-        data: any = undefined;
         constructor() {
-          super((validator, validation) => ((validation as ObjectValidation).data = validator.if(false).object([]).value));
+          super(validator => (result = validator.if(false).object([]).value));
         }
       }
 
       const validation = new ObjectValidation();
       expect(validation.ok).toBe(true);
-      expect(validation.data).toBe(undefined);
+      expect(result).toBe(undefined);
     });
 
     it('should work async correctly', async () => {
