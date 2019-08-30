@@ -1,7 +1,7 @@
 import { $Base, traverse$ } from './$';
 import BadgeFailureMessages, { matchBadgeGlob } from './BadgeFailureMessages';
 import Internal from './Internal';
-import ValidatorSeed from './ValidatorSeed';
+import ValidatorSeed from './interfaces/ValidatorSeed';
 import ValidatorBase from './ValidatorBase';
 
 /**

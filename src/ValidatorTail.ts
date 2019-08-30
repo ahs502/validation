@@ -2,7 +2,7 @@ import { $Base, $Path, set$, get$ } from './$';
 import Internal from './Internal';
 import Chain from './Chain';
 import { getBadgeFailureMessage } from './BadgeFailureMessages';
-import Validator from './Validator';
+import Validator from './interfaces/Validator';
 import Validation from './Validation';
 
 export default class ValidatorTail<Badge extends string, $ extends $Base, Data> /*implements Validator<Badge, $, Data>*/ {
@@ -326,8 +326,8 @@ export default class ValidatorTail<Badge extends string, $ extends $Base, Data> 
 
     if (this.promise)
       return (this.internal.promises[this.index] = this.promise.then(() => {
-        if (this.internal.done) return Promise.resolve(null) as any;
-        this.chain && ((this.chain.data = this.data), this.internal.closedChains.push(this.chain.name));
+        if (this.internal.done) return undefined as any;
+        this.chain && ((this.chain.async = true), (this.chain.data = this.data), this.internal.closedChains.push(this.chain.name));
         return this.data;
       }));
 

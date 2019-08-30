@@ -1,4 +1,4 @@
-import { $Base } from './$';
+import { $Base } from '../$';
 import Validator from './Validator';
 import ValidatorChain from './ValidatorChain';
 

@@ -1,4 +1,4 @@
-import Validator from './Validator';
+import Validator from './interfaces/Validator';
 
 export default class ValidatorMock /* implements Validator<'', {}, {}> */ {
   constructor(private readonly data: any, private readonly async: boolean) {}
