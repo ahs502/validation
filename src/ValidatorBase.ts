@@ -32,7 +32,7 @@ export default class ValidatorBase<Badge extends string, $ extends $Base> /*impl
     this.internal.openedChains.push(name);
 
     if (name in this.internal.chains) {
-      const { watches: oldWatches, data, effects } = this.internal.chains[name];
+      const { watches: oldWatches, async, data, effects } = this.internal.chains[name];
       if (watches.length === oldWatches.length && watches.every((thing, index) => thing === oldWatches[index])) {
         effects.invalidates && this.internal.invalidate();
         effects.badges.forEach(badge => this.internal.badges.includes(badge) || this.internal.badges.push(badge));
@@ -41,7 +41,7 @@ export default class ValidatorBase<Badge extends string, $ extends $Base> /*impl
         }
         effects.$.forEach(pair => set$(this.internal.$, pair.path, pair.value));
         this.internal.closedChains.push(name);
-        return new ValidatorMock(data) as any;
+        return new ValidatorMock(data, async) as any;
       }
     }
 
@@ -49,6 +49,7 @@ export default class ValidatorBase<Badge extends string, $ extends $Base> /*impl
       name,
       watches,
       data: undefined,
+      async: false,
       effects: {
         invalidates: false,
         badges: [],

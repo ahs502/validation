@@ -377,5 +377,5 @@ export default interface Validator<Badge extends string, $ extends $Base, Data> 
     task: Data extends undefined ? ((value: T) => D | Promise<D>) : ((value: T, data: Data) => D | Promise<D>)
   ): Validator<Badge, $, D>;
 
-  readonly data: Data | Promise<Data>;
+  readonly value: Data | Promise<Data>;
 }

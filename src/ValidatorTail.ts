@@ -128,7 +128,7 @@ export default class ValidatorTail<Badge extends string, $ extends $Base, Data> 
 
     function action(target: any): void {
       validator.data = target;
-      if (!target || typeof target !== 'object' || Array.isArray(target)) {
+      if (!target /* || typeof target !== 'object' || Array.isArray(target) */ || target.__proto__ !== Object.prototype) {
         validator.internal.invalidate();
         validator.chain && (validator.chain.effects.invalidates = true);
         validator.bypass = true;
@@ -316,9 +316,13 @@ export default class ValidatorTail<Badge extends string, $ extends $Base, Data> 
     return this as any;
   }
 
-  end(): Promise<Data> {
+  get value(): Data | Promise<Data> {
+    return this.promise ? this.promise.then(() => this.data) : this.data;
+  }
+
+  end(): Data | Promise<Data> {
     if (!this.original) throw 'Only the named chains can be finished.';
-    if (this.internal.done) return Promise.resolve(null) as any;
+    if (this.internal.done) return (this.promise ? Promise.resolve(undefined) : undefined) as any;
 
     if (this.promise)
       return (this.internal.promises[this.index] = this.promise.then(() => {
@@ -328,7 +332,7 @@ export default class ValidatorTail<Badge extends string, $ extends $Base, Data> 
       }));
 
     this.chain && ((this.chain.data = this.data), this.internal.closedChains.push(this.chain.name));
-    return Promise.resolve(this.data);
+    return this.data;
   }
 
   private asynchronize(task: () => any) {

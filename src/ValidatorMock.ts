@@ -1,7 +1,7 @@
 import Validator from './Validator';
 
-export default class ValidatorMock implements Validator<'', {}, {}> {
-  constructor(private readonly data: any) {}
+export default class ValidatorMock /* implements Validator<'', {}, {}> */ {
+  constructor(private readonly data: any, private readonly async: boolean) {}
 
   with(): any {
     return this;
@@ -45,11 +45,21 @@ export default class ValidatorMock implements Validator<'', {}, {}> {
   set(): any {
     return this;
   }
+  put(): any {
+    return this;
+  }
   get(): any {
     return this;
   }
+  use(): any {
+    return this;
+  }
 
-  end(): Promise<any> {
-    return Promise.resolve(this.data);
+  get value(): any {
+    return this;
+  }
+
+  end(): any | Promise<any> {
+    return this.async ? Promise.resolve(this.data) : this.data;
   }
 }
