@@ -1,22 +1,7 @@
 import { $Base } from '../utils/$';
+import { Something, Provider, Result, Value } from './utils';
 import ValidatorDescribed from '../descriptions/ValidatorDescribed';
 import ValidatorAsync from './ValidatorAsync';
-
-interface Something {}
-
-type Provider<Data, T> = Data extends void ? (() => T) : Data extends boolean ? ((data: boolean) => T) : ((data: Data) => T);
-type Result<Badge extends string, $ extends $Base, Data, T> = T extends
-  | Promise<infer D>
-  | ValidatorAsync<Badge, $, infer D>
-  | ((data: Data) => Promise<infer D>)
-  | ((data: Data) => ValidatorAsync<Badge, $, infer D>)
-  ? Promise<D>
-  : T extends Validator<Badge, $, infer D> | ((data: Data) => Validator<Badge, $, infer D>)
-  ? D
-  : T extends ((data: Data) => infer D)
-  ? D
-  : T;
-type Value<Badge extends string, $ extends $Base, Data, T> = Result<Badge, $, Data, T> extends Promise<infer D0> ? D0 : Result<Badge, $, Data, T>;
 
 export default interface Validator<Badge extends string, $ extends $Base, Data> extends ValidatorDescribed {
   with<T = Something | Promise<Something>>(
@@ -1514,5 +1499,8 @@ export default interface Validator<Badge extends string, $ extends $Base, Data> 
     task: Data extends undefined ? ((value: T) => U) : ((value: T, data: Data) => U)
   ): U extends Promise<infer D> ? ValidatorAsync<Badge, $, D> : U extends boolean ? Validator<Badge, $, boolean> : Validator<Badge, $, U>;
 
+  /**
+   * TODO
+   */
   readonly value: Data;
 }
