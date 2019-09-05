@@ -1,12 +1,12 @@
 import Validation from '../../../src/Validation';
 
 describe('Validator', () => {
-  describe('object chain', () => {
+  describe('array chain', () => {
     describe('basic functionality', () => {
       let result: any;
-      class ObjectValidation extends Validation<'A'> {
+      class ArrayValidation extends Validation<'A'> {
         constructor(data: any) {
-          super(validator => (result = validator.object(data).earn('A').value));
+          super(validator => (result = validator.array(data).earn('A').value));
         }
       }
 
@@ -25,13 +25,13 @@ describe('Validator', () => {
         ${Function}            | ${false}
         ${Array}               | ${false}
         ${Object}              | ${false}
-        ${[]}                  | ${false}
-        ${[1, 2, 3]}           | ${false}
-        ${{}}                  | ${true}
-        ${{ a: 1, b: 2 }}      | ${true}
-      `('should provide $data anyway, continue the chain for JSON-like objects and block it and invalidate otherwise', ({ data, ok }) => {
+        ${{}}                  | ${false}
+        ${{ a: 1, b: 2 }}      | ${false}
+        ${[]}                  | ${true}
+        ${[1, 2, 3]}           | ${true}
+      `('should provide $data anyway, continue the chain for JSON-like arrays and block it and invalidate otherwise', ({ data, ok }) => {
         result = undefined;
-        const validation = new ObjectValidation(data);
+        const validation = new ArrayValidation(data);
         expect(validation.ok).toBe(ok);
         expect(result).toBe(data);
         expect(validation.badges).toEqual(ok ? ['A'] : []);
@@ -40,11 +40,11 @@ describe('Validator', () => {
 
     describe('basic functionality with promises', () => {
       let result: any;
-      class ObjectValidation extends Validation<'A'> {
+      class ArrayValidation extends Validation<'A'> {
         constructor(data: any) {
           super(validator =>
             validator
-              .object(Promise.resolve(data))
+              .array(Promise.resolve(data))
               .earn('A')
               .value.then(feed => (result = feed))
           );
@@ -66,13 +66,13 @@ describe('Validator', () => {
         ${Function}            | ${false}
         ${Array}               | ${false}
         ${Object}              | ${false}
-        ${[]}                  | ${false}
-        ${[1, 2, 3]}           | ${false}
-        ${{}}                  | ${true}
-        ${{ a: 1, b: 2 }}      | ${true}
-      `('should provide $data anyway, continue the chain for JSON-like objects and block it and invalidate otherwise', async ({ data, ok }) => {
+        ${{}}                  | ${false}
+        ${{ a: 1, b: 2 }}      | ${false}
+        ${[]}                  | ${true}
+        ${[1, 2, 3]}           | ${true}
+      `('should provide $data anyway, continue the chain for JSON-like arrays and block it and invalidate otherwise', async ({ data, ok }) => {
         result = undefined;
-        const validation = new ObjectValidation(data);
+        const validation = new ArrayValidation(data);
         expect(validation.ok).toBe(true);
         expect(result).toBe(undefined);
         expect(validation.badges).toEqual([]);
@@ -84,35 +84,35 @@ describe('Validator', () => {
     });
 
     it('should get bypassed correctly', () => {
-      class ObjectValidation extends Validation {
+      class ArrayValidation extends Validation {
         constructor() {
-          super(validator => validator.if(false).object([]));
+          super(validator => validator.if(false).array({}));
         }
       }
 
-      const validation = new ObjectValidation();
+      const validation = new ArrayValidation();
       expect(validation.ok).toBe(true);
     });
 
     it('should work async correctly', async () => {
-      class ObjectValidation extends Validation {
+      class ArrayValidation extends Validation {
         data: any = undefined;
         constructor() {
           super(validator =>
             validator
               .with(Promise.resolve())
-              .object([])
+              .array({})
               .value.then(feed => (this.data = feed))
           );
         }
       }
 
-      const validation = new ObjectValidation();
+      const validation = new ArrayValidation();
       expect(validation.ok).toBe(true);
       expect(validation.data).toBe(undefined);
       await validation.async;
       expect(validation.ok).toBe(false);
-      expect(validation.data).toEqual([]);
+      expect(validation.data).toEqual({});
     });
   });
 });
