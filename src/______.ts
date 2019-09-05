@@ -1,5 +1,4 @@
-import Validation from '../Validation';
-import ValidatorAsync from '../interfaces/ValidatorAsync';
+import Validation from './Validation';
 
 class XValidation extends Validation<'', { a: { b: number; c: ['s'] } }> {
   constructor() {
@@ -25,6 +24,6 @@ interface I {
   new (a: number);
 }
 
-class C implements I {
-  constructor(a: number) {}
-}
+// class C implements I {
+//   constructor(a: number) {}
+// }
