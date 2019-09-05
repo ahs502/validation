@@ -1,4 +1,4 @@
-import Validation from './Validation';
+import Validation from '../Validation';
 
 export type $Field = string | number | boolean | bigint | Date; //TODO: Add more basic values;
 type $Recursive = $Field | { [key: string]: $Recursive } | $Array;

@@ -1,7 +1,7 @@
-import { $Base, $Path, set$, get$ } from './$';
-import Internal from './Internal';
-import Chain from './Chain';
-import { getBadgeFailureMessage } from './BadgeFailureMessages';
+import { $Base, $Path, set$, get$ } from './utils/$';
+import Internal from './utils/Internal';
+import Chain from './utils/Chain';
+import { getBadgeFailureMessage } from './utils/BadgeFailureMessages';
 import Validator from './interfaces/Validator';
 import Validation from './Validation';
 

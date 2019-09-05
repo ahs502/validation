@@ -1,5 +1,5 @@
-import { $Base, set$ } from './$';
-import Internal from './Internal';
+import { $Base, set$ } from './utils/$';
+import Internal from './utils/Internal';
 import ValidatorSeed from './interfaces/ValidatorSeed';
 import ValidatorTail from './ValidatorTail';
 import ValidatorMock from './ValidatorMock';
