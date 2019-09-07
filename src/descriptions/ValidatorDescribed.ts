@@ -270,4 +270,9 @@ export default interface ValidatorDescribed {
    *
    */
   use(...params: any[]): any;
+
+  /**
+   * TODO
+   */
+  value: any;
 }

@@ -317,10 +317,12 @@ export default class ValidatorTail<Badge extends string, $ extends $Base, Data> 
   }
 
   get value(): Data | Promise<Data> {
+    //TODO: Throw if not safe
     return this.promise ? this.promise.then(() => this.data) : this.data;
   }
 
   end(): Data | Promise<Data> {
+    //TODO: Throw if not safe
     if (!this.original) throw 'Only the named chains can be finished.';
     if (this.internal.done) return (this.promise ? Promise.resolve(undefined) : undefined) as any;
 
