@@ -4,6 +4,8 @@ import ValidatorSeed from './interfaces/ValidatorSeed';
 import ValidatorTail from './ValidatorTail';
 import ValidatorMock from './ValidatorMock';
 
+const numberRegExp = /^\d+$/;
+
 export default class ValidatorBase<Badge extends string, $ extends $Base> /*implements ValidatorSeed<Badge, $>*/ {
   constructor(private readonly internal: Internal<Badge, $>) {}
 
@@ -14,7 +16,8 @@ export default class ValidatorBase<Badge extends string, $ extends $Base> /*impl
       {},
       {
         get(target, property, receiver) {
-          $paths[0].push(property as any);
+          const propertyString = property as string;
+          $paths[0].push(numberRegExp.test(propertyString) ? Number(propertyString) : propertyString);
           return proxy;
         },
         set(target, property, value, receiver) {
