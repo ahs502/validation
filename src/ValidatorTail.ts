@@ -313,7 +313,22 @@ export default class ValidatorTail<Badge extends string, $ extends $Base, Data> 
     return this as any;
   }
 
-  get<T, D>($path: T, task?: (value: T, data: Data) => D | Promise<D>): ValidatorTail<Badge, $, D> {
+  get<T>($path: T): ValidatorTail<Badge, $, T> {
+    if (this.internal.done || (this.unsafe === false && (this.unsafe = true), this.bypass)) return this as any;
+
+    const validator = this,
+      path = this.get$Path();
+
+    function action(): void {
+      validator.data = get$(validator.internal.$, path);
+    }
+
+    this.asynchronize(action);
+
+    return this as any;
+  }
+
+  use<T, D>($path: T, task: (value: T, data: Data) => D | Promise<D> | Validator<Badge, $, D>): Validator<Badge, $, D> {
     if (this.internal.done || (this.unsafe === false && (this.unsafe = true), this.bypass)) return this as any;
 
     const validator = this,
@@ -324,19 +339,12 @@ export default class ValidatorTail<Badge extends string, $ extends $Base, Data> 
     }
 
     this.asynchronize(() => {
-      const given = get$(this.internal.$, path);
-      const result = arguments.length > 1 && task ? task(given, this.data) : given;
-      return result instanceof Promise ? result.then(data => this.internal.done || action(data)) : action(result);
+      const result = task(get$(this.internal.$, path), this.data);
+      const value = result instanceof ValidatorTail ? result.value : result;
+      return value instanceof Promise ? value.then(data => this.internal.done || action(data)) : action(value);
     });
 
     return this as any;
-  }
-
-  use<T>(
-    $path: T,
-    task: Data extends undefined ? ((value: T) => T | Promise<T> | Validator<Badge, $, T>) : ((value: T, data: Data) => T | Promise<T> | Validator<Badge, $, T>)
-  ): Validator<Badge, $, T> {
-    throw 'Not implemented.';
   }
 
   get value(): Data | Promise<Data> {
