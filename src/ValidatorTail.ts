@@ -273,15 +273,32 @@ export default class ValidatorTail<Badge extends string, $ extends $Base, Data> 
     return this as any;
   }
 
-  set<T>($path: T, value?: T | Promise<T> | ((data: Data) => T | Promise<T>)): ValidatorTail<Badge, $, T> {
+  set($path: Data): ValidatorTail<Badge, $, Data> {
     if (this.internal.done || (this.unsafe === false && (this.unsafe = true), this.bypass)) return this as any;
 
     const validator = this,
       path = this.get$Path();
 
-    function action(value?: T): void {
+    function action(): void {
+      set$(validator.internal.$, path, validator.data);
+      validator.chain && validator.chain.effects.$.push({ path, value: validator.data });
+    }
+
+    this.asynchronize(action);
+
+    return this as any;
+  }
+
+  put<T>($path: T, value: T | Promise<T> | ((data: Data) => T | Promise<T>)): ValidatorTail<Badge, $, T> {
+    if (this.internal.done || (this.unsafe === false && (this.unsafe = true), this.bypass)) return this as any;
+
+    const validator = this,
+      path = this.get$Path();
+
+    function action(value: T): void {
+      validator.data = value as any;
       set$(validator.internal.$, path, value);
-      validator.chain && validator.chain.effects.$.push({ path, value });
+      validator.chain && validator.chain.effects.$.push({ path, value: value });
       if (value instanceof Validation && !value.ok) {
         validator.internal.invalidate();
         validator.chain && (validator.chain.effects.invalidates = true);
@@ -289,9 +306,8 @@ export default class ValidatorTail<Badge extends string, $ extends $Base, Data> 
     }
 
     this.asynchronize(() => {
-      const given = arguments.length > 1 ? value : ((this.data as any) as T);
-      const result = typeof given === 'function' ? (given as ((data: Data) => T | Promise<T>))(this.data) : given;
-      result instanceof Promise ? result.then(data => this.internal.done || action(data)) : action(result);
+      const result = typeof value === 'function' ? (value as any)(this.data) : value;
+      return result instanceof Promise ? result.then(data => this.internal.done || action(data)) : action(result);
     });
 
     return this as any;
@@ -314,6 +330,13 @@ export default class ValidatorTail<Badge extends string, $ extends $Base, Data> 
     });
 
     return this as any;
+  }
+
+  use<T>(
+    $path: T,
+    task: Data extends undefined ? ((value: T) => T | Promise<T> | Validator<Badge, $, T>) : ((value: T, data: Data) => T | Promise<T> | Validator<Badge, $, T>)
+  ): Validator<Badge, $, T> {
+    throw 'Not implemented.';
   }
 
   get value(): Data | Promise<Data> {

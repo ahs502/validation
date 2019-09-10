@@ -103,10 +103,16 @@ export default class ValidatorBase<Badge extends string, $ extends $Base> /*impl
     return new ValidatorTail<Badge, $, undefined>(this.internal).if(...conditions);
   }
 
-  set($path: any, value: any): any {
-    return new ValidatorTail<Badge, $, undefined>(this.internal).set($path, value);
+  set($path: any): any {
+    return new ValidatorTail<Badge, $, undefined>(this.internal).set($path);
+  }
+  put($path: any, value: any): any {
+    return new ValidatorTail<Badge, $, undefined>(this.internal).put($path, value);
   }
   get($path: any, task: any): any {
     return new ValidatorTail<Badge, $, undefined>(this.internal).get($path, task);
+  }
+  use($path: any, task: any): any {
+    return new ValidatorTail<Badge, $, undefined>(this.internal).use($path, task);
   }
 }

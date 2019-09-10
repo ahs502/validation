@@ -1,6 +1,6 @@
 import Validation from '../Validation';
 
-export type $Field = string | number | boolean | bigint | Date; //TODO: Add more basic values;
+export type $Field = Validation | string | number | boolean | bigint | Date; //TODO: Add more basic values;
 type $Recursive = $Field | { [key: string]: $Recursive } | $Array;
 interface $Array extends ReadonlyArray<$Recursive> {}
 export interface $Base {
