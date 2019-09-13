@@ -110,10 +110,11 @@ describe('Validator', () => {
 
         try {
           new TestValidation();
-          expect(true).toBe(false);
         } catch (reason) {
           expect(result).toBe(undefined);
+          return;
         }
+        expect(true).toBe(false);
       });
 
       it('should not work fine with an unsafe async validator result', async () => {
@@ -133,10 +134,11 @@ describe('Validator', () => {
 
         try {
           new TestValidation();
-          expect(true).toBe(false);
         } catch (reason) {
           expect(result).toBe(undefined);
+          return;
         }
+        expect(true).toBe(false);
       });
 
       it('should mark the chain unsafe if it comes after check rings', () => {
@@ -148,8 +150,10 @@ describe('Validator', () => {
 
         try {
           new TestValidation();
-          expect(true).toBe(false);
-        } catch {}
+        } catch {
+          return;
+        }
+        expect(true).toBe(false);
       });
 
       it('should get bypassed correctly', () => {
@@ -288,12 +292,13 @@ describe('Validator', () => {
           expect(validation.badges).toEqual([]);
           expect(result).toBe(undefined);
           await validation.async;
-          expect(true).toBe(false);
         } catch (reason) {
           expect(validation.ok).toBe(undefined);
           expect(validation.badges).toEqual([]);
           expect(result).toEqual(undefined);
+          return;
         }
+        expect(true).toBe(false);
       });
 
       it('should not work fine with an unsafe async validator result', async () => {
@@ -318,12 +323,13 @@ describe('Validator', () => {
           expect(validation.badges).toEqual([]);
           expect(result).toBe(undefined);
           await validation.async;
-          expect(true).toBe(false);
         } catch (reason) {
           expect(validation.ok).toBe(undefined);
           expect(validation.badges).toEqual([]);
           expect(result).toEqual(undefined);
+          return;
         }
+        expect(true).toBe(false);
       });
 
       it('should mark the chain unsafe if it comes after check rings', async () => {
@@ -342,8 +348,10 @@ describe('Validator', () => {
 
         try {
           await new TestValidation().async;
-          expect(true).toBe(false);
-        } catch {}
+        } catch {
+          return;
+        }
+        expect(true).toBe(false);
       });
 
       it('should get bypassed correctly', async () => {

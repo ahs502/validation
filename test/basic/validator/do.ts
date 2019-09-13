@@ -110,10 +110,11 @@ describe('Validator', () => {
 
         try {
           new TestValidation();
-          expect(true).toBe(false);
         } catch (reason) {
           expect(result).toBe(undefined);
+          return;
         }
+        expect(true).toBe(false);
       });
 
       it('should not work with unsafe asynchronous validation chain output', async () => {
@@ -154,8 +155,10 @@ describe('Validator', () => {
 
         try {
           new TestValidation();
-          expect(true).toBe(false);
-        } catch {}
+        } catch {
+          return;
+        }
+        expect(true).toBe(false);
       });
 
       it('should get bypassed correctly', () => {
@@ -173,6 +176,33 @@ describe('Validator', () => {
         const validation = new TestValidation();
         expect(validation.ok).toBe(true);
         expect(validation.badges).toEqual([]);
+      });
+
+      it.each`
+        data
+        ${undefined}
+        ${null}
+        ${10}
+        ${'something'}
+        ${true}
+        ${NaN}
+        ${{}}
+        ${/a/}
+        ${Infinity}
+        ${() => {}}
+      `('should throw for non-array data $data', ({ data }) => {
+        class TestValidation extends Validation {
+          constructor() {
+            super(validator => (validator.with(data) as any).each(() => 10));
+          }
+        }
+
+        try {
+          new TestValidation();
+        } catch {
+          return;
+        }
+        expect(true).toBe(false);
       });
     });
 
@@ -294,12 +324,13 @@ describe('Validator', () => {
           expect(validation.badges).toEqual([]);
           expect(result).toBe(undefined);
           await validation.async;
-          expect(true).toBe(false);
         } catch (reason) {
           expect(validation.ok).toBe(undefined);
           expect(validation.badges).toEqual([]);
           expect(result).toEqual(undefined);
+          return;
         }
+        expect(true).toBe(false);
       });
 
       it('should work with asynchronous validation chain output', async () => {
@@ -323,12 +354,13 @@ describe('Validator', () => {
           expect(validation.badges).toEqual([]);
           expect(result).toBe(undefined);
           await validation.async;
-          expect(true).toBe(false);
         } catch (error) {
           expect(validation.ok).toBe(undefined);
           expect(validation.badges).toEqual([]);
           expect(result).toEqual(undefined);
+          return;
         }
+        expect(true).toBe(false);
       });
 
       it('should mark the chain unsafe if it comes after check rings', async () => {
@@ -347,8 +379,10 @@ describe('Validator', () => {
 
         try {
           await new TestValidation().async;
-          expect(true).toBe(false);
-        } catch {}
+        } catch {
+          return;
+        }
+        expect(true).toBe(false);
       });
 
       it('should get bypassed correctly', async () => {
@@ -369,6 +403,33 @@ describe('Validator', () => {
         await validation.async;
         expect(validation.ok).toBe(true);
         expect(validation.badges).toEqual([]);
+      });
+
+      it.each`
+        data
+        ${undefined}
+        ${null}
+        ${10}
+        ${'something'}
+        ${true}
+        ${NaN}
+        ${{}}
+        ${/a/}
+        ${Infinity}
+        ${() => {}}
+      `('should throw for non-array data $data', async ({ data }) => {
+        class TestValidation extends Validation {
+          constructor() {
+            super(validator => (validator.with(Promise.resolve(data)) as any).each(() => 10));
+          }
+        }
+
+        try {
+          await new TestValidation().async;
+        } catch {
+          return;
+        }
+        expect(true).toBe(false);
       });
     });
   });

@@ -121,10 +121,11 @@ describe('Validator', () => {
 
         try {
           new TestValidation();
-          expect(true).toBe(false);
         } catch (reason) {
           expect(result).toBe(undefined);
+          return;
         }
+        expect(true).toBe(false);
       });
 
       it('should not be able to produce unsafe asynchronous validation chains', async () => {
@@ -143,10 +144,11 @@ describe('Validator', () => {
 
         try {
           new TestValidation();
-          expect(true).toBe(false);
         } catch (reason) {
           expect(result).toBe(undefined);
+          return;
         }
+        expect(true).toBe(false);
       });
     });
 
@@ -269,12 +271,13 @@ describe('Validator', () => {
         expect(validation.badges).toEqual([]);
         expect(result).toBe(undefined);
         await validation.async;
-        expect(true).toBe(false);
       } catch (reason) {
         expect(validation.ok).toBe(undefined);
         expect(validation.badges).toEqual([]);
         expect(result).toEqual(undefined);
+        return;
       }
+      expect(true).toBe(false);
     });
 
     it('should not be able to produce unsafe asynchronous validation chains', async () => {
@@ -298,12 +301,13 @@ describe('Validator', () => {
         expect(validation.badges).toEqual([]);
         expect(result).toBe(undefined);
         await validation.async;
-        expect(true).toBe(false);
       } catch (reason) {
         expect(validation.ok).toBe(undefined);
         expect(validation.badges).toEqual([]);
         expect(result).toEqual(undefined);
+        return;
       }
+      expect(true).toBe(false);
     });
 
     it('should get bypassed correctly', () => {
