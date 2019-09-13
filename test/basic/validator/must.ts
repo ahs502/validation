@@ -81,6 +81,21 @@ describe('Validator', () => {
       });
     });
 
+    it('should make the chain to become unsafe if a provider ring come after', () => {
+      class TestValidation extends Validation {
+        constructor() {
+          super(validator => validator.then(() => validator.must(true).with(10)));
+        }
+      }
+
+      try {
+        new TestValidation();
+      } catch {
+        return;
+      }
+      throw 'Invalid point';
+    });
+
     it('should get bypassed correctly', () => {
       class TestValidation extends Validation<'A'> {
         constructor() {

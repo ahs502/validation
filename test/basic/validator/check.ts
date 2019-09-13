@@ -216,5 +216,20 @@ describe('Validator', () => {
         expect(validation.errors).toEqual({ A: 'something' });
       });
     });
+
+    it('should make the chain to become unsafe if a provider ring come after', () => {
+      class TestValidation extends Validation {
+        constructor() {
+          super(validator => validator.then(() => validator.check('', true).with(10)));
+        }
+      }
+
+      try {
+        new TestValidation();
+      } catch {
+        return;
+      }
+      throw 'Invalid point';
+    });
   });
 });
