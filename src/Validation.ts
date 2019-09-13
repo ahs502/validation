@@ -145,7 +145,7 @@ export default abstract class Validation<Badge extends string = string, $ extend
           internal.done = true;
           resolve(this.ok);
         },
-        reject: reason => {
+        reject: (reason: any) => {
           if (internal.done) return;
           internal.done = true;
           delete (this as any).ok;
@@ -161,7 +161,13 @@ export default abstract class Validation<Badge extends string = string, $ extend
 
     const internal = this.internal;
 
-    validate(new ValidatorBase(internal) as any);
+    try {
+      validate(new ValidatorBase(internal) as any);
+    } catch (error) {
+      internal.done = true;
+      delete (this as any).ok;
+      throw error;
+    }
 
     (function handlePromises() {
       const promises = Object.values(internal.promises);

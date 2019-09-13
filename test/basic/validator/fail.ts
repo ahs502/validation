@@ -3,36 +3,36 @@ import Validation from '../../../src/Validation';
 describe('Validator', () => {
   describe('fail ring', () => {
     describe('basic', () => {
-      class FailValidation extends Validation<'A'> {
+      class TestValidation extends Validation<'A'> {
         constructor() {
           super(validator => validator.fail('A'));
         }
       }
 
       it('should be able to be initialized', () => {
-        const validation = new FailValidation();
-        expect(validation).toBeInstanceOf(FailValidation);
+        const validation = new TestValidation();
+        expect(validation).toBeInstanceOf(TestValidation);
       });
 
       it('should invalidate.', () => {
-        const validation = new FailValidation();
+        const validation = new TestValidation();
         expect(validation.ok).toBe(false);
       });
 
       it('should has no earned badges.', () => {
-        const validation = new FailValidation();
+        const validation = new TestValidation();
         expect(validation.badges).toEqual([]);
         expect(validation.has('A')).toBe(false);
       });
 
       it('should has the failed badges.', () => {
-        const validation = new FailValidation();
+        const validation = new TestValidation();
         expect(validation.failedBadges).toEqual(['A']);
         expect(validation.errors).toEqual({ A: '' });
       });
 
       it('should have no error messages.', () => {
-        const validation = new FailValidation();
+        const validation = new TestValidation();
         expect(validation.messages().length).toBe(0);
         expect(validation.message()).toBe(undefined);
         expect(validation.messages('A').length).toBe(0);
@@ -40,7 +40,7 @@ describe('Validator', () => {
       });
 
       it('should throw properly.', () => {
-        const validation = new FailValidation();
+        const validation = new TestValidation();
         try {
           validation.throw();
           throw 'Test failed.';
@@ -56,7 +56,7 @@ describe('Validator', () => {
       });
 
       it('should get resolved without errors and change in results.', async () => {
-        const validation = new FailValidation();
+        const validation = new TestValidation();
         await validation.async;
         expect(validation.ok).toBe(false);
         expect(validation.badges).toEqual([]);
@@ -64,14 +64,14 @@ describe('Validator', () => {
       });
 
       it('should get disposed successfully and still get resolved.', async () => {
-        const validation = new FailValidation();
+        const validation = new TestValidation();
         validation.dispose();
         await validation.async;
       });
     });
 
     describe('multiple', () => {
-      class FailValidation extends Validation<'A' | 'B' | 'C' | 'D'> {
+      class TestValidation extends Validation<'A' | 'B' | 'C' | 'D'> {
         constructor() {
           super(validator => {
             validator.fail('A');
@@ -86,22 +86,22 @@ describe('Validator', () => {
       }
 
       it('should be able to be initialized', () => {
-        const validation = new FailValidation();
-        expect(validation).toBeInstanceOf(FailValidation);
+        const validation = new TestValidation();
+        expect(validation).toBeInstanceOf(TestValidation);
       });
 
       it('should invalidate.', () => {
-        const validation = new FailValidation();
+        const validation = new TestValidation();
         expect(validation.ok).toBe(false);
       });
 
       it('should not block the chain.', () => {
-        const validation = new FailValidation();
+        const validation = new TestValidation();
         expect(validation.failedBadges.includes('D')).toBe(true);
       });
 
       it('should has no earned badges.', () => {
-        const validation = new FailValidation();
+        const validation = new TestValidation();
         expect(validation.badges).toEqual([]);
         expect(validation.has('A')).toBe(false);
         expect(validation.has('A', 'B')).toBe(false);
@@ -109,13 +109,13 @@ describe('Validator', () => {
       });
 
       it('should has no failed badges.', () => {
-        const validation = new FailValidation();
+        const validation = new TestValidation();
         expect(validation.failedBadges).toEqual(['A', 'B', 'C', 'D']);
         expect(validation.errors).toEqual({ A: '', B: '', C: '', D: '' });
       });
 
       it('should have no error messages.', () => {
-        const validation = new FailValidation();
+        const validation = new TestValidation();
         expect(validation.messages().length).toBe(0);
         expect(validation.message()).toBe(undefined);
         expect(validation.messages('A').length).toBe(0);
@@ -127,7 +127,7 @@ describe('Validator', () => {
       });
 
       it('should throw properly.', () => {
-        const validation = new FailValidation();
+        const validation = new TestValidation();
         try {
           validation.throw();
           throw 'Test failed.';
@@ -143,13 +143,13 @@ describe('Validator', () => {
       });
 
       it('should get resolved without errors and change in results.', async () => {
-        const validation = new FailValidation();
+        const validation = new TestValidation();
         await validation.async;
         expect(validation.ok).toBe(false);
       });
 
       it('should get disposed successfully and still get resolved.', async () => {
-        const validation = new FailValidation();
+        const validation = new TestValidation();
         validation.dispose();
         await validation.async;
         expect(validation.ok).toBe(false);
@@ -157,24 +157,24 @@ describe('Validator', () => {
     });
 
     it('should get bypassed correctly', () => {
-      class FailValidation extends Validation<'A'> {
+      class TestValidation extends Validation<'A'> {
         constructor() {
           super(validator => validator.must(false).fail('A'));
         }
       }
 
-      const validation = new FailValidation();
+      const validation = new TestValidation();
       expect(validation.failedBadges).toEqual([]);
     });
 
     it('should work async correctly', async () => {
-      class FailValidation extends Validation<'A'> {
+      class TestValidation extends Validation<'A'> {
         constructor() {
           super(validator => validator.with(Promise.resolve()).fail('A'));
         }
       }
 
-      const validation = new FailValidation();
+      const validation = new TestValidation();
       expect(validation.failedBadges).toEqual([]);
       await validation.async;
       expect(validation.failedBadges).toEqual(['A']);

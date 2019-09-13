@@ -4,14 +4,14 @@ describe('Validator', () => {
   describe('with ring', () => {
     it('should work synchronously and provide data', () => {
       let result: any = undefined;
-      class WithValidation extends Validation<'A'> {
+      class TestValidation extends Validation<'A'> {
         constructor(data: any) {
           super(validator => (result = validator.with(data).earn('A').value));
         }
       }
 
       const data: any = { a: 1 };
-      const validation = new WithValidation(data);
+      const validation = new TestValidation(data);
       expect(validation.ok).toBe(true);
       expect(validation.badges).toEqual(['A']);
       expect(result).toBe(data);
@@ -19,7 +19,7 @@ describe('Validator', () => {
 
     it('should work synchronously and provide data with promises', async () => {
       let result: any = undefined;
-      class WithValidation extends Validation<'A'> {
+      class TestValidation extends Validation<'A'> {
         constructor(data: any) {
           super(validator =>
             validator
@@ -31,7 +31,7 @@ describe('Validator', () => {
       }
 
       const data: any = { a: 1 };
-      const validation = new WithValidation(data);
+      const validation = new TestValidation(data);
       expect(validation.ok).toBe(true);
       expect(validation.badges).toEqual([]);
       expect(result).toBe(undefined);
@@ -43,7 +43,7 @@ describe('Validator', () => {
 
     it('should work asynchronously and provide data', async () => {
       let result: any = undefined;
-      class WithValidation extends Validation<'A'> {
+      class TestValidation extends Validation<'A'> {
         constructor(data: any) {
           super(validator =>
             validator
@@ -56,7 +56,7 @@ describe('Validator', () => {
       }
 
       const data: any = { a: 1 };
-      const validation = new WithValidation(data);
+      const validation = new TestValidation(data);
       expect(validation.ok).toBe(true);
       expect(validation.badges).toEqual([]);
       expect(result).toBe(undefined);
@@ -68,7 +68,7 @@ describe('Validator', () => {
 
     it('should work asynchronously and provide data with promises', async () => {
       let result: any = undefined;
-      class WithValidation extends Validation<'A'> {
+      class TestValidation extends Validation<'A'> {
         constructor(data: any) {
           super(validator =>
             validator
@@ -81,7 +81,7 @@ describe('Validator', () => {
       }
 
       const data: any = { a: 1 };
-      const validation = new WithValidation(data);
+      const validation = new TestValidation(data);
       expect(validation.ok).toBe(true);
       expect(validation.badges).toEqual([]);
       expect(result).toBe(undefined);

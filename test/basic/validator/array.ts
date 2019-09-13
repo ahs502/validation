@@ -4,7 +4,7 @@ describe('Validator', () => {
   describe('array chain', () => {
     describe('basic functionality', () => {
       let result: any;
-      class ArrayValidation extends Validation<'A'> {
+      class TestValidation extends Validation<'A'> {
         constructor(data: any) {
           super(validator => (result = validator.array(data).earn('A').value));
         }
@@ -31,7 +31,7 @@ describe('Validator', () => {
         ${[1, 2, 3]}           | ${true}
       `('should provide $data anyway, continue the chain for JSON-like arrays and block it and invalidate otherwise', ({ data, ok }) => {
         result = undefined;
-        const validation = new ArrayValidation(data);
+        const validation = new TestValidation(data);
         expect(validation.ok).toBe(ok);
         expect(result).toBe(data);
         expect(validation.badges).toEqual(ok ? ['A'] : []);
@@ -40,7 +40,7 @@ describe('Validator', () => {
 
     describe('basic functionality with promises', () => {
       let result: any;
-      class ArrayValidation extends Validation<'A'> {
+      class TestValidation extends Validation<'A'> {
         constructor(data: any) {
           super(validator =>
             validator
@@ -72,7 +72,7 @@ describe('Validator', () => {
         ${[1, 2, 3]}           | ${true}
       `('should provide $data anyway, continue the chain for JSON-like arrays and block it and invalidate otherwise', async ({ data, ok }) => {
         result = undefined;
-        const validation = new ArrayValidation(data);
+        const validation = new TestValidation(data);
         expect(validation.ok).toBe(true);
         expect(result).toBe(undefined);
         expect(validation.badges).toEqual([]);
@@ -83,31 +83,59 @@ describe('Validator', () => {
       });
     });
 
+    it('should mark the chain unsafe if it comes after check rings', () => {
+      class TestValidation extends Validation {
+        constructor() {
+          super(validator => validator.then(() => validator.if().array(10)));
+        }
+      }
+
+      try {
+        new TestValidation();
+        expect(true).toBe(false);
+      } catch {}
+    });
+
+    it('should mark the chain unsafe if it comes after check rings, asynchronously', async () => {
+      class TestValidation extends Validation {
+        constructor() {
+          super(validator =>
+            validator.with(Promise.resolve()).then(() =>
+              validator
+                .with(Promise.resolve())
+                .if()
+                .array(10)
+            )
+          );
+        }
+      }
+
+      try {
+        await new TestValidation().async;
+        expect(true).toBe(false);
+      } catch {}
+    });
+
     it('should get bypassed correctly', () => {
-      class ArrayValidation extends Validation {
+      class TestValidation extends Validation {
         constructor() {
           super(validator => validator.if(false).array({}));
         }
       }
 
-      const validation = new ArrayValidation();
+      const validation = new TestValidation();
       expect(validation.ok).toBe(true);
     });
 
     it('should work async correctly', async () => {
-      class ArrayValidation extends Validation {
+      class TestValidation extends Validation {
         data: any = undefined;
         constructor() {
-          super(validator =>
-            validator
-              .with(Promise.resolve())
-              .array({})
-              .value.then(feed => (this.data = feed))
-          );
+          super(validator => (validator.with(Promise.resolve()).array({}).value as Promise<any>).then(feed => (this.data = feed)));
         }
       }
 
-      const validation = new ArrayValidation();
+      const validation = new TestValidation();
       expect(validation.ok).toBe(true);
       expect(validation.data).toBe(undefined);
       await validation.async;

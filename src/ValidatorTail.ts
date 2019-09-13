@@ -328,7 +328,7 @@ export default class ValidatorTail<Badge extends string, $ extends $Base, Data> 
     return this as any;
   }
 
-  use<T, D>($path: T, task: (value: T, data: Data) => D | Promise<D> | Validator<Badge, $, D>): Validator<Badge, $, D> {
+  use<T, D>($path: T, task: (value: T, data: Data) => D | Promise<D> | ValidatorTail<Badge, $, D>): ValidatorTail<Badge, $, D> {
     if (this.internal.done || (this.unsafe === false && (this.unsafe = true), this.bypass)) return this as any;
 
     const validator = this,
@@ -340,7 +340,7 @@ export default class ValidatorTail<Badge extends string, $ extends $Base, Data> 
 
     this.asynchronize(() => {
       const result = task(get$(this.internal.$, path), this.data);
-      const value = result instanceof ValidatorTail ? result.value : result;
+      const value = result instanceof ValidatorTail ? result.provide() : result;
       return value instanceof Promise ? value.then(data => this.internal.done || action(data)) : action(value);
     });
 

@@ -15,7 +15,7 @@ describe('Validator', () => {
   describe('set ring', () => {
     it('should set validation.$ values without blocking the chain', () => {
       let result: any = undefined;
-      class SetValidation extends Validation<'A', $Type> {
+      class TestValidation extends Validation<'A', $Type> {
         constructor() {
           super(
             validator =>
@@ -27,7 +27,7 @@ describe('Validator', () => {
         }
       }
 
-      const validation = new SetValidation();
+      const validation = new TestValidation();
       expect(validation.ok).toBe(true);
       expect(validation.badges).toEqual(['A']);
       expect(result).toBe(10);
@@ -36,7 +36,7 @@ describe('Validator', () => {
 
     it('should work async correctly', async () => {
       let result: any = undefined;
-      class SetValidation extends Validation<'A', $Type> {
+      class TestValidation extends Validation<'A', $Type> {
         constructor() {
           super(validator =>
             (validator
@@ -47,7 +47,7 @@ describe('Validator', () => {
         }
       }
 
-      const validation = new SetValidation();
+      const validation = new TestValidation();
       expect(validation.ok).toBe(true);
       expect(validation.badges).toEqual([]);
       expect(result).toBe(undefined);
@@ -60,7 +60,7 @@ describe('Validator', () => {
     });
 
     it('should get bypassed correctly', () => {
-      class SetValidation extends Validation<'A', $Type> {
+      class TestValidation extends Validation<'A', $Type> {
         constructor() {
           super(validator =>
             validator
@@ -72,14 +72,14 @@ describe('Validator', () => {
         }
       }
 
-      const validation = new SetValidation();
+      const validation = new TestValidation();
       expect(validation.ok).toBe(true);
       expect(validation.badges).toEqual([]);
       expect(validation.$).toEqual({});
     });
 
     it('should get bypassed asynchronously correctly', async () => {
-      class SetValidation extends Validation<'A', $Type> {
+      class TestValidation extends Validation<'A', $Type> {
         constructor() {
           super(validator =>
             validator
@@ -91,7 +91,7 @@ describe('Validator', () => {
         }
       }
 
-      const validation = new SetValidation();
+      const validation = new TestValidation();
       expect(validation.ok).toBe(true);
       expect(validation.badges).toEqual([]);
       expect(validation.$).toEqual({});

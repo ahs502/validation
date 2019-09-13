@@ -15,7 +15,7 @@ describe('Validator', () => {
   describe('get ring', () => {
     it('should get values from validation.$ without blocking the chain', () => {
       let result: any = undefined;
-      class SetValidation extends Validation<'A', $Type> {
+      class TestValidation extends Validation<'A', $Type> {
         constructor() {
           super(validator => {
             validator.with(10).set(validator.$.b[1].d.f[2]);
@@ -24,7 +24,7 @@ describe('Validator', () => {
         }
       }
 
-      const validation = new SetValidation();
+      const validation = new TestValidation();
       expect(validation.ok).toBe(true);
       expect(validation.badges).toEqual(['A']);
       expect(result).toBe(10);
@@ -33,7 +33,7 @@ describe('Validator', () => {
 
     it('should work async correctly', async () => {
       let result: any = undefined;
-      class SetValidation extends Validation<'A', $Type> {
+      class TestValidation extends Validation<'A', $Type> {
         constructor() {
           super(validator => {
             validator
@@ -49,7 +49,7 @@ describe('Validator', () => {
         }
       }
 
-      const validation = new SetValidation();
+      const validation = new TestValidation();
       expect(validation.ok).toBe(true);
       expect(validation.badges).toEqual([]);
       expect(result).toBe(undefined);
@@ -61,9 +61,42 @@ describe('Validator', () => {
       expect(validation.$).toEqual({ b: [undefined, { d: { f: [undefined, undefined, 10] } }] });
     });
 
+    it('should mark the chain unsafe if it comes after check rings', () => {
+      class TestValidation extends Validation {
+        constructor() {
+          super(validator => validator.then(() => validator.if().get(validator.$)));
+        }
+      }
+
+      try {
+        new TestValidation();
+        expect(true).toBe(false);
+      } catch {}
+    });
+
+    it('should mark the chain unsafe if it comes after check rings, asynchronously', async () => {
+      class TestValidation extends Validation {
+        constructor() {
+          super(validator =>
+            validator.with(Promise.resolve()).then(() =>
+              validator
+                .with(Promise.resolve())
+                .if()
+                .get(validator.$)
+            )
+          );
+        }
+      }
+
+      try {
+        await new TestValidation().async;
+        expect(true).toBe(false);
+      } catch {}
+    });
+
     it('should get bypassed correctly', () => {
       let result: any = undefined;
-      class SetValidation extends Validation<'A', $Type> {
+      class TestValidation extends Validation<'A', $Type> {
         constructor() {
           super(validator => {
             validator.with(10).set(validator.$.b[1].d.f[2]);
@@ -75,7 +108,7 @@ describe('Validator', () => {
         }
       }
 
-      const validation = new SetValidation();
+      const validation = new TestValidation();
       expect(validation.ok).toBe(true);
       expect(validation.badges).toEqual([]);
       expect(result).toBe(undefined);
@@ -84,7 +117,7 @@ describe('Validator', () => {
 
     it('should get bypassed asynchronously correctly', async () => {
       let result: any = undefined;
-      class SetValidation extends Validation<'A', $Type> {
+      class TestValidation extends Validation<'A', $Type> {
         constructor() {
           super(validator =>
             validator
@@ -101,7 +134,7 @@ describe('Validator', () => {
         }
       }
 
-      const validation = new SetValidation();
+      const validation = new TestValidation();
       expect(validation.ok).toBe(true);
       expect(validation.badges).toEqual([]);
       expect(validation.$).toEqual({});

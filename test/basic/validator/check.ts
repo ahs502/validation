@@ -3,21 +3,21 @@ import Validation from '../../../src/Validation';
 describe('Validator', () => {
   describe('check ring', () => {
     describe('simple check', () => {
-      class CheckValidation extends Validation<'A'> {
+      class TestValidation extends Validation<'A'> {
         constructor(data: 'valid' | 'invalid') {
           super(validator => validator.check('A', data === 'valid'));
         }
       }
 
       it('should validate a valid data', () => {
-        const validation = new CheckValidation('valid');
+        const validation = new TestValidation('valid');
         expect(validation.ok).toBe(true);
         expect(validation.badges).toEqual(['A']);
         expect(validation.failedBadges).toEqual([]);
       });
 
       it('should invalidate an invalid data', () => {
-        const validation = new CheckValidation('invalid');
+        const validation = new TestValidation('invalid');
         expect(validation.ok).toBe(false);
         expect(validation.badges).toEqual([]);
         expect(validation.failedBadges).toEqual(['A']);
@@ -25,21 +25,21 @@ describe('Validator', () => {
     });
 
     describe('simple check with function validator', () => {
-      class CheckValidation extends Validation<'A'> {
+      class TestValidation extends Validation<'A'> {
         constructor(data: 'valid' | 'invalid') {
           super(validator => validator.check('A', () => data === 'valid'));
         }
       }
 
       it('should validate a valid data', () => {
-        const validation = new CheckValidation('valid');
+        const validation = new TestValidation('valid');
         expect(validation.ok).toBe(true);
         expect(validation.badges).toEqual(['A']);
         expect(validation.failedBadges).toEqual([]);
       });
 
       it('should invalidate an invalid data', () => {
-        const validation = new CheckValidation('invalid');
+        const validation = new TestValidation('invalid');
         expect(validation.ok).toBe(false);
         expect(validation.badges).toEqual([]);
         expect(validation.failedBadges).toEqual(['A']);
@@ -47,21 +47,21 @@ describe('Validator', () => {
     });
 
     describe('simple check with feeded function validator', () => {
-      class CheckValidation extends Validation<'A'> {
+      class TestValidation extends Validation<'A'> {
         constructor(data: 'valid' | 'invalid') {
           super(validator => validator.with('valid').check('A', feed => data === feed));
         }
       }
 
       it('should validate a valid data', () => {
-        const validation = new CheckValidation('valid');
+        const validation = new TestValidation('valid');
         expect(validation.ok).toBe(true);
         expect(validation.badges).toEqual(['A']);
         expect(validation.failedBadges).toEqual([]);
       });
 
       it('should invalidate an invalid data', () => {
-        const validation = new CheckValidation('invalid');
+        const validation = new TestValidation('invalid');
         expect(validation.ok).toBe(false);
         expect(validation.badges).toEqual([]);
         expect(validation.failedBadges).toEqual(['A']);
@@ -69,14 +69,14 @@ describe('Validator', () => {
     });
 
     describe('simple check without message', () => {
-      class CheckValidation extends Validation<'A'> {
+      class TestValidation extends Validation<'A'> {
         constructor(data: 'valid' | 'invalid') {
           super(validator => validator.check('A', data === 'valid'));
         }
       }
 
       it('should invalidate an invalid data without error messages', () => {
-        const validation = new CheckValidation('invalid');
+        const validation = new TestValidation('invalid');
         expect(validation.errors).toEqual({ A: '' });
         expect(validation.message()).toBe(undefined);
         expect(validation.message('B*')).toBe(undefined);
@@ -85,14 +85,14 @@ describe('Validator', () => {
     });
 
     describe('simple check with message', () => {
-      class CheckValidation extends Validation<'A'> {
+      class TestValidation extends Validation<'A'> {
         constructor(data: 'valid' | 'invalid') {
           super(validator => validator.check('A', data === 'valid', 'something'));
         }
       }
 
       it('should validate a valid data without error messages', () => {
-        const validation = new CheckValidation('valid');
+        const validation = new TestValidation('valid');
         expect(validation.ok).toBe(true);
         expect(validation.errors).toEqual({});
         expect(validation.message()).toBe(undefined);
@@ -101,7 +101,7 @@ describe('Validator', () => {
       });
 
       it('should invalidate an invalid data with proper error message', () => {
-        const validation = new CheckValidation('invalid');
+        const validation = new TestValidation('invalid');
         expect(validation.errors).toEqual({ A: 'something' });
         expect(validation.message()).toBe('something');
         expect(validation.message('B*')).toBe(undefined);
@@ -110,14 +110,14 @@ describe('Validator', () => {
     });
 
     describe('simple check with message function', () => {
-      class CheckValidation extends Validation<'A'> {
+      class TestValidation extends Validation<'A'> {
         constructor(data: 'valid' | 'invalid') {
           super(validator => validator.check('A', data === 'valid', () => 'something'));
         }
       }
 
       it('should invalidate an invalid data with proper error message', () => {
-        const validation = new CheckValidation('invalid');
+        const validation = new TestValidation('invalid');
         expect(validation.errors).toEqual({ A: 'something' });
         expect(validation.message()).toBe('something');
         expect(validation.message('B*')).toBe(undefined);
@@ -126,14 +126,14 @@ describe('Validator', () => {
     });
 
     describe('simple check with feeded message function', () => {
-      class CheckValidation extends Validation<'A'> {
+      class TestValidation extends Validation<'A'> {
         constructor(data: 'valid' | 'invalid') {
           super(validator => validator.with('something').check('A', data === 'valid', feed => feed));
         }
       }
 
       it('should invalidate an invalid data with proper error message', () => {
-        const validation = new CheckValidation('invalid');
+        const validation = new TestValidation('invalid');
         expect(validation.errors).toEqual({ A: 'something' });
         expect(validation.message()).toBe('something');
         expect(validation.message('B*')).toBe(undefined);
@@ -142,7 +142,7 @@ describe('Validator', () => {
     });
 
     describe('block chain behaviour', () => {
-      class CheckValidation extends Validation<'A' | 'B' | 'C' | 'D' | 'E' | 'F'> {
+      class TestValidation extends Validation<'A' | 'B' | 'C' | 'D' | 'E' | 'F'> {
         constructor(data: string) {
           super(
             validator => {
@@ -179,7 +179,7 @@ describe('Validator', () => {
         ${'ABCEF'}  | ${false} | ${['A', 'B', 'C', 'E', 'F']}      | ${['D']}      | ${{ D: '!D' }}
         ${'ABDEF'}  | ${false} | ${['A', 'B', 'E', 'F']}           | ${['C']}      | ${{ C: '!C' }}
       `('should block the chain for $data iff it invalidates', ({ data, ok, badges, failedBadges, errors }) => {
-        const validation = new CheckValidation(data);
+        const validation = new TestValidation(data);
         expect(validation.ok).toBe(ok);
         expect(validation.badges).toEqual(badges);
         expect(validation.failedBadges).toEqual(failedBadges);
@@ -188,14 +188,14 @@ describe('Validator', () => {
     });
 
     describe('basic async check', () => {
-      class CheckValidation extends Validation<'A'> {
+      class TestValidation extends Validation<'A'> {
         constructor(data: 'valid' | 'invalid') {
           super(validator => validator.with(Promise.resolve()).check('A', data === 'valid', 'something'));
         }
       }
 
       it('should validate a valid data without error messages', async () => {
-        const validation = new CheckValidation('valid');
+        const validation = new TestValidation('valid');
         expect(validation.ok).toBe(true);
         expect(validation.badges).toEqual([]);
         expect(validation.errors).toEqual({});
@@ -206,7 +206,7 @@ describe('Validator', () => {
       });
 
       it('should invalidate an invalid data with proper error message', async () => {
-        const validation = new CheckValidation('invalid');
+        const validation = new TestValidation('invalid');
         expect(validation.ok).toBe(true);
         expect(validation.badges).toEqual([]);
         expect(validation.errors).toEqual({});
