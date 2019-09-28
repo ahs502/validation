@@ -109,8 +109,8 @@ export default class ValidatorBase<Badge extends string, $ extends $Base> /*impl
   put($path: any, value: any): any {
     return new ValidatorTail<Badge, $, undefined>(this.internal).put($path, value);
   }
-  get($path: any, task: any): any {
-    return new ValidatorTail<Badge, $, undefined>(this.internal).get($path, task);
+  get($path: any): any {
+    return new ValidatorTail<Badge, $, undefined>(this.internal).get($path);
   }
   use($path: any, task: any): any {
     return new ValidatorTail<Badge, $, undefined>(this.internal).use($path, task);
