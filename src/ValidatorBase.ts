@@ -17,7 +17,12 @@ export default class ValidatorBase<Badge extends string, $ extends $Base> /*impl
       {
         get(target, property, receiver) {
           const propertyString = property as string;
-          $paths[0].push(numberRegExp.test(propertyString) ? Number(propertyString) : propertyString);
+          if (numberRegExp.test(propertyString)) {
+            const propertyNumber = Number(propertyString);
+            $paths[0].push(propertyNumber <= Number.MAX_SAFE_INTEGER ? propertyNumber : propertyString);
+          } else {
+            $paths[0].push(propertyString);
+          }
           return proxy;
         },
         set(target, property, value, receiver) {
