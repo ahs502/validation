@@ -32,11 +32,11 @@
     "dist/**/*"
   ],
   "devDependencies": {
-    "@types/jest": "^24.0.15",
-    "jest": "^24.8.0",
-    "npm-check-updates": "^3.1.20",
-    "rimraf": "^2.6.3",
-    "ts-jest": "^24.0.2",
-    "typescript": "^3.5.3"
+    "@types/jest": "^24.0.23",
+    "jest": "^24.9.0",
+    "npm-check-updates": "^3.2.2",
+    "rimraf": "^3.0.0",
+    "ts-jest": "^24.2.0",
+    "typescript": "^3.7.2"
   }
 }
