@@ -9,8 +9,8 @@
     "build": "rimraf dist/* && tsc",
     "prepare": "npm test && npm run build",
     "test": "jest --config jestconfig.json",
-    "check-updates": "ncu",
-    "install-updates": "ncu -u && npm install",
+    "updates:check": "ncu",
+    "updates:install": "ncu -u && npm install",
     "tsc": "tsc",
     "ncu": "ncu"
   },
@@ -32,11 +32,11 @@
     "dist/**/*"
   ],
   "devDependencies": {
-    "@types/jest": "^24.0.23",
-    "jest": "^24.9.0",
-    "npm-check-updates": "^3.2.2",
-    "rimraf": "^3.0.0",
-    "ts-jest": "^24.2.0",
-    "typescript": "^3.7.2"
+    "@types/jest": "^25.2.1",
+    "jest": "^25.3.0",
+    "npm-check-updates": "^4.1.2",
+    "rimraf": "^3.0.2",
+    "ts-jest": "^25.3.1",
+    "typescript": "^3.8.3"
   }
 }
