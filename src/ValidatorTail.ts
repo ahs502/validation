@@ -27,7 +27,9 @@ export default class ValidatorTail<Badge extends string, $ extends $Base, Data> 
       validator.data = target as any;
     }
 
-    this.asynchronize(() => (target instanceof Promise ? target.then(data => this.internal.done || action(data)) : action(target)));
+    this.asynchronize(() =>
+      this.wrapInternalCurrentChain(() => (target instanceof Promise ? target.then(data => this.internal.done || action(data)) : action(target)))
+    );
 
     return this as any;
   }
@@ -42,7 +44,7 @@ export default class ValidatorTail<Badge extends string, $ extends $Base, Data> 
     }
 
     this.asynchronize(() => {
-      const result = task(this.data);
+      const result = this.wrapInternalCurrentChain(() => task(this.data));
       if (result instanceof ValidatorTail) return result.provideFor(action);
       if (result instanceof Promise) return result.then(action);
       action(result);
@@ -62,7 +64,8 @@ export default class ValidatorTail<Badge extends string, $ extends $Base, Data> 
 
     this.asynchronize(() => {
       if (!this.data || !Array.isArray(this.data)) throw 'Can not iterate on empty or non-array objects.';
-      const result = task(...this.data);
+      const args = this.data;
+      const result = this.wrapInternalCurrentChain(() => task(...args));
       if (result instanceof ValidatorTail) return result.provideFor(action);
       if (result instanceof Promise) return result.then(action);
       action(result);
@@ -85,7 +88,7 @@ export default class ValidatorTail<Badge extends string, $ extends $Base, Data> 
     this.asynchronize(() => {
       if (!this.data || !Array.isArray(this.data)) throw 'Can not iterate on empty or non-array objects.';
       const result = this.data.map((item, index) => {
-        const r = task(item, index, this.data);
+        const r = this.wrapInternalCurrentChain(() => task(item, index, this.data));
         if (r instanceof ValidatorTail) return r.provide();
         return r;
       });
@@ -108,11 +111,13 @@ export default class ValidatorTail<Badge extends string, $ extends $Base, Data> 
     }
 
     this.asynchronize(() => {
-      const result = targets.map(target => {
-        const r = typeof target === 'function' ? (target as ((data: Data) => T | Promise<T> | ValidatorTail<Badge, $, T>))(validator.data) : target;
-        if (r instanceof ValidatorTail) return r.provide();
-        return r;
-      });
+      const result = this.wrapInternalCurrentChain(() =>
+        targets.map(target => {
+          const r = typeof target === 'function' ? (target as (data: Data) => T | Promise<T> | ValidatorTail<Badge, $, T>)(validator.data) : target;
+          if (r instanceof ValidatorTail) return r.provide();
+          return r;
+        })
+      );
       if (result.every(r => !(r instanceof Promise))) return action(...(result as any));
       return Promise.all(result.map(r => (r instanceof Promise ? r : Promise.resolve(r)))).then(finalResult => action(...finalResult));
     });
@@ -135,7 +140,9 @@ export default class ValidatorTail<Badge extends string, $ extends $Base, Data> 
       }
     }
 
-    this.asynchronize(() => (target instanceof Promise ? target.then(data => this.internal.done || action(data)) : action(target)));
+    this.asynchronize(() =>
+      this.wrapInternalCurrentChain(() => (target instanceof Promise ? target.then(data => this.internal.done || action(data)) : action(target)))
+    );
 
     return this as any;
   }
@@ -155,7 +162,9 @@ export default class ValidatorTail<Badge extends string, $ extends $Base, Data> 
       }
     }
 
-    this.asynchronize(() => (target instanceof Promise ? target.then(data => this.internal.done || action(data)) : action(target)));
+    this.asynchronize(() =>
+      this.wrapInternalCurrentChain(() => (target instanceof Promise ? target.then(data => this.internal.done || action(data)) : action(target)))
+    );
 
     return this as any;
   }
@@ -357,6 +366,8 @@ export default class ValidatorTail<Badge extends string, $ extends $Base, Data> 
     if (!this.original) throw 'Only the named chains can be finished.';
     if (this.internal.done) return (this.promise ? Promise.resolve(undefined) : undefined) as any;
 
+    delete this.internal.currentChain;
+
     if (this.promise)
       return (this.internal.promises[this.index] = this.promise.then(() => {
         if (this.internal.done) return undefined as any;
@@ -366,6 +377,14 @@ export default class ValidatorTail<Badge extends string, $ extends $Base, Data> 
 
     this.chain && ((this.chain.data = this.data), this.internal.closedChains.push(this.chain.name));
     return this.data;
+  }
+
+  private wrapInternalCurrentChain<T>(task: () => T): T {
+    const currentChain = this.internal.currentChain;
+    this.internal.currentChain = this.chain;
+    const result = task();
+    this.internal.currentChain = currentChain;
+    return result;
   }
 
   private asynchronize(task: () => any) {

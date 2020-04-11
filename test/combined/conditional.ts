@@ -154,37 +154,34 @@ describe('Validation', () => {
     const persons: Person[] = [];
 
     test.each`
-      person                                                                                                                     | ok
-      ${{ name: 'Hessam', age: 33, type: 'PARENT', info: { childrenNames: ['Mahdiar'] } }}                                       | ${true}
-      ${{ name: 'Hessam', age: 33, type: 'PARENT', info: { childrenNames: [] } }}                                                | ${false}
-      ${{ name: 'mehrnoosh', age: 26, type: 'PARENT', info: { childrenNames: ['Mahdiar'] } }}                                    | ${false}
-      ${{ name: 'Mehrnoosh', age: 10, type: 'PARENT', info: { childrenNames: ['Mahdiar'] } }}                                    | ${false}
-      ${{ name: 'Mehrnoosh', age: 26, type: 'PARENT' }}                                                                          | ${false}
-      ${{ name: 'Mehrnoosh', age: 26, type: 'PARENT', info: {} }}                                                                | ${false}
-      ${{ name: 'Mehrnoosh', age: 26, type: 'PARENT', info: { childrenNames: ['Mahdiar'] } }}                                    | ${true}
-      ${{ name: 'Shahrzad', age: 33, type: 'PARENT', info: { childrenNames: ['Roze', 'Siavash'] } }}                             | ${true}
-      ${{ name: 'Mahdiar', age: 3, type: 'CHILD', info: { fatherName: 'Hessam', motherName: 'mehrnoosh' } }}                     | ${false}
-      ${{ name: 'Mahdiar', age: 3, type: 'STUDENT', info: { fatherName: 'Hessam', motherName: 'Mehrnoosh' } }}                   | ${false}
-      ${{ name: 'Mahdiar', age: 13, type: 'STUDENT', info: { fatherName: 'Hessam', motherName: 'Mehrnoosh' } }}                  | ${false}
-      ${{ name: 'Mahdiar', age: 13, type: 'CHILD', info: { fatherName: 'Hessam', motherName: 'Mehrnoosh' } }}                    | ${false}
-      ${{ name: 'Mahdiar', age: 3, type: 'CHILD', info: { fatherName: 'Hessam', motherName: 'Mehrnoosh' } }}                     | ${true}
-      ${{ name: 'Roze', age: 7, type: 'STUDENT', info: { schoolName: 'Simorgh', grade: 19 } }}                                   | ${false}
-      ${{ name: 'Roze', age: 7, type: 'STUDENT', info: { schoolName: 'Golha', grade: 19 } }}                                     | ${false}
-      ${{ name: 'Roze', age: 7, type: 'STUDENT', info: { motherName: 'Mehrnoosh', schoolName: 'Golha', grade: 19 } }}            | ${false}
-      ${{ name: 'Roze', age: 7, type: 'STUDENT', info: { motherName: 'Shahrzad', schoolName: 'Golha', grade: true } }}           | ${false}
-      ${{ name: 'Roze', age: 7, type: 'STUDENT', info: { motherName: 'Shahrzad', schoolName: 'Golha', grade: null } }}           | ${false}
-      ${{ name: 'Roze', age: 7, type: 'STUDENT', info: { motherName: 'Shahrzad', schoolName: 'Golha', grade: NaN } }}            | ${false}
-      ${{ name: 'Roze', age: 7, type: 'STUDENT', info: { motherName: 'Shahrzad', schoolName: 'Golha', grade: undefined } }}      | ${false}
-      ${{ name: 'Roze', age: 7, type: 'STUDENT', info: { motherName: 'Shahrzad', schoolName: 'Golha', grade: '19' } }}           | ${false}
-      ${{ name: 'Roze', age: 7, type: 'STUDENT', info: { motherName: 'Shahrzad', schoolName: 'Golha', grade: -19 } }}            | ${false}
-      ${{ name: 'Roze', age: -7, type: 'STUDENT', info: { motherName: 'Shahrzad', schoolName: 'Golha', grade: 19 } }}            | ${false}
-      ${{ name: 'Roze', age: 6, type: 'STUDENT', info: { motherName: 'Shahrzad', schoolName: 'Golha', grade: 19 } }}             | ${false}
-      ${{ test: true, name: 'Roze', age: 7, type: 'STUDENT', info: { motherName: 'Shahrzad', schoolName: 'Golha', grade: 19 } }} | ${true}
+      person                                                                                                                | ok
+      ${{ name: 'Hessam', age: 33, type: 'PARENT', info: { childrenNames: ['Mahdiar'] } }}                                  | ${true}
+      ${{ name: 'Hessam', age: 33, type: 'PARENT', info: { childrenNames: [] } }}                                           | ${false}
+      ${{ name: 'mehrnoosh', age: 26, type: 'PARENT', info: { childrenNames: ['Mahdiar'] } }}                               | ${false}
+      ${{ name: 'Mehrnoosh', age: 10, type: 'PARENT', info: { childrenNames: ['Mahdiar'] } }}                               | ${false}
+      ${{ name: 'Mehrnoosh', age: 26, type: 'PARENT' }}                                                                     | ${false}
+      ${{ name: 'Mehrnoosh', age: 26, type: 'PARENT', info: {} }}                                                           | ${false}
+      ${{ name: 'Mehrnoosh', age: 26, type: 'PARENT', info: { childrenNames: ['Mahdiar'] } }}                               | ${true}
+      ${{ name: 'Shahrzad', age: 33, type: 'PARENT', info: { childrenNames: ['Roze', 'Siavash'] } }}                        | ${true}
+      ${{ name: 'Mahdiar', age: 3, type: 'CHILD', info: { fatherName: 'Hessam', motherName: 'mehrnoosh' } }}                | ${false}
+      ${{ name: 'Mahdiar', age: 3, type: 'STUDENT', info: { fatherName: 'Hessam', motherName: 'Mehrnoosh' } }}              | ${false}
+      ${{ name: 'Mahdiar', age: 13, type: 'STUDENT', info: { fatherName: 'Hessam', motherName: 'Mehrnoosh' } }}             | ${false}
+      ${{ name: 'Mahdiar', age: 13, type: 'CHILD', info: { fatherName: 'Hessam', motherName: 'Mehrnoosh' } }}               | ${false}
+      ${{ name: 'Mahdiar', age: 3, type: 'CHILD', info: { fatherName: 'Hessam', motherName: 'Mehrnoosh' } }}                | ${true}
+      ${{ name: 'Roze', age: 7, type: 'STUDENT', info: { schoolName: 'Simorgh', grade: 19 } }}                              | ${false}
+      ${{ name: 'Roze', age: 7, type: 'STUDENT', info: { schoolName: 'Golha', grade: 19 } }}                                | ${false}
+      ${{ name: 'Roze', age: 7, type: 'STUDENT', info: { motherName: 'Mehrnoosh', schoolName: 'Golha', grade: 19 } }}       | ${false}
+      ${{ name: 'Roze', age: 7, type: 'STUDENT', info: { motherName: 'Shahrzad', schoolName: 'Golha', grade: true } }}      | ${false}
+      ${{ name: 'Roze', age: 7, type: 'STUDENT', info: { motherName: 'Shahrzad', schoolName: 'Golha', grade: null } }}      | ${false}
+      ${{ name: 'Roze', age: 7, type: 'STUDENT', info: { motherName: 'Shahrzad', schoolName: 'Golha', grade: NaN } }}       | ${false}
+      ${{ name: 'Roze', age: 7, type: 'STUDENT', info: { motherName: 'Shahrzad', schoolName: 'Golha', grade: undefined } }} | ${false}
+      ${{ name: 'Roze', age: 7, type: 'STUDENT', info: { motherName: 'Shahrzad', schoolName: 'Golha', grade: '19' } }}      | ${false}
+      ${{ name: 'Roze', age: 7, type: 'STUDENT', info: { motherName: 'Shahrzad', schoolName: 'Golha', grade: -19 } }}       | ${false}
+      ${{ name: 'Roze', age: -7, type: 'STUDENT', info: { motherName: 'Shahrzad', schoolName: 'Golha', grade: 19 } }}       | ${false}
+      ${{ name: 'Roze', age: 6, type: 'STUDENT', info: { motherName: 'Shahrzad', schoolName: 'Golha', grade: 19 } }}        | ${false}
+      ${{ name: 'Roze', age: 7, type: 'STUDENT', info: { motherName: 'Shahrzad', schoolName: 'Golha', grade: 19 } }}        | ${true}
     `('should add person $person if its validation result is $ok', ({ person, ok }) => {
       const validation = new PersonValidation(person, persons, schools);
-      if (person.test) {
-        console.log(validation.$.studentInfo.$.asChild);
-      }
       expect(validation.ok).toBe(ok);
       if (validation.ok) {
         persons.push(person);

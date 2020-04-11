@@ -35,7 +35,7 @@ export default class ValidatorBase<Badge extends string, $ extends $Base> /*impl
 
   start(name: string, ...watches: any[]): ValidatorTail<Badge, $, undefined> {
     if (this.internal.currentChain) throw `Already within the chain '${this.internal.currentChain.name}'.`;
-    if (this.internal.openedChains.includes(name)) throw `The chain $'${name}' is already started.`;
+    if (this.internal.openedChains.includes(name)) throw `The chain '${name}' is already started.`;
 
     this.internal.openedChains.push(name);
 
@@ -47,7 +47,7 @@ export default class ValidatorBase<Badge extends string, $ extends $Base> /*impl
         for (const badge in effects.errors) {
           this.internal.errors[badge] = effects.errors[badge];
         }
-        effects.$.forEach(pair => set$(this.internal.$, pair.path, pair.value));
+        effects.$.forEach(({ path, value }) => set$(this.internal.$, path, value));
         this.internal.closedChains.push(name);
         return new ValidatorMock(data, async) as any;
       }
