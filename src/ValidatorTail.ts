@@ -63,7 +63,7 @@ export default class ValidatorTail<Badge extends string, $ extends $Base, Data> 
     }
 
     this.asynchronize(() => {
-      if (!this.data || !Array.isArray(this.data)) throw 'Can not iterate on empty or non-array objects.';
+      if (!this.data || !Array.isArray(this.data)) throw new Error('Can not iterate on empty or non-array objects.');
       const args = this.data;
       const result = this.wrapInternalCurrentChain(() => task(...args));
       if (result instanceof ValidatorTail) return result.provideFor(action);
@@ -86,7 +86,7 @@ export default class ValidatorTail<Badge extends string, $ extends $Base, Data> 
     }
 
     this.asynchronize(() => {
-      if (!this.data || !Array.isArray(this.data)) throw 'Can not iterate on empty or non-array objects.';
+      if (!this.data || !Array.isArray(this.data)) throw new Error('Can not iterate on empty or non-array objects.');
       const result = this.data.map((item, index) => {
         const r = this.wrapInternalCurrentChain(() => task(item, index, this.data));
         if (r instanceof ValidatorTail) return r.provide();
@@ -363,7 +363,7 @@ export default class ValidatorTail<Badge extends string, $ extends $Base, Data> 
 
   end(): Data | Promise<Data> {
     //TODO: Throw if not safe
-    if (!this.original) throw 'Only the named chains can be finished.';
+    if (!this.original) throw new Error('Only the named chains can be finished.');
     if (this.internal.done) return (this.promise ? Promise.resolve(undefined) : undefined) as any;
 
     delete this.internal.currentChain;
@@ -400,19 +400,19 @@ export default class ValidatorTail<Badge extends string, $ extends $Base, Data> 
   }
 
   private provide(): Data | Promise<Data> {
-    if (this.unsafe) throw 'Can not retrieve data from an unsafe validation chain.';
+    if (this.unsafe) throw new Error('Can not retrieve data from an unsafe validation chain.');
     if (this.promise) return this.promise.then(() => this.data);
     return this.data;
   }
   private provideFor(consumer: (data: Data) => void): void | Promise<void> {
-    if (this.unsafe) throw 'Can not retrieve data from an unsafe validation chain.';
+    if (this.unsafe) throw new Error('Can not retrieve data from an unsafe validation chain.');
     if (this.promise) return this.promise.then(() => consumer(this.data));
     consumer(this.data);
   }
 
   private get$Path(): $Path {
     const $path = this.internal.$paths.shift();
-    if (!$path) throw "The path must be specified using 'validator.$'.";
+    if (!$path) throw new Error("The path must be specified using 'validator.$'.");
     return $path;
   }
 }

@@ -34,8 +34,8 @@ export default class ValidatorBase<Badge extends string, $ extends $Base> /*impl
   }
 
   start(name: string, ...watches: any[]): ValidatorTail<Badge, $, undefined> {
-    if (this.internal.currentChain) throw `Already within the chain '${this.internal.currentChain.name}'.`;
-    if (this.internal.openedChains.includes(name)) throw `The chain '${name}' is already started.`;
+    if (this.internal.currentChain) throw new Error(`Already within the chain '${this.internal.currentChain.name}'.`);
+    if (this.internal.openedChains.includes(name)) throw new Error(`The chain '${name}' is already started.`);
 
     this.internal.openedChains.push(name);
 

@@ -201,10 +201,10 @@ export default abstract class Validation<Badge extends string = string, $ extend
   throw(defaultMessage?: string): void {
     if (this.ok) return;
     let message = this.message();
-    if (message) throw message;
+    if (message) throw new Error(message);
     traverse$(this.$, validation => ((message = validation.message()), !!message));
-    if (message) throw message;
-    throw defaultMessage || '';
+    if (message) throw new Error(message);
+    throw new Error(defaultMessage || '');
   }
 
   dispose(message: string = 'disposed'): void {
