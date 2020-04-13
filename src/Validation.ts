@@ -6,40 +6,57 @@ import ValidatorSeed from './interfaces/ValidatorSeed';
 import ValidatorBase from './ValidatorBase';
 
 /**
- * The generic base for every validation class.
+ * The base class for every other validation class.
  *
  * Defines by two optional types:
  * - `Badge`: The type of all *badge*s involved with this validation.
  *   Should extend `string`, by default is `string`, can also be `never` but
  *   usually is a **`string` literal type** listing all related badges.
- * - `$`: The type of the internal data structure used for nested
- *   complex data type validations. Should extend `{}` and by default is `{}`.
+ * - `$`: The type of the internal storage mostly used for nested validations.
+ *   Should extend `{}` and by default is `{}`.
  *
  * --------------------------------
  * Example:
  *
- *    class StudentValidation extends Validation<
- *    | 'NAME_EXISTS',
- *    | 'NAME_IS_VALID',
- *    | 'AGE_EXISTS',
- *    | ...,
- *    {
- *      grades: GradeValidation[],
- *      courses: CourseValidation[]
- *    }> {
- *      constructor(student: Student) {
- *        super(validator => {
- *          // Validate the student data...
- *        });
- *      }
- *    }
+ *```typescript
+ *interface Person {
+ *  name: string;
+ *  age?: number;
+ *}
  *
- *    const student: Student = ... ;
- *    const validation = new StudentValidation(student);
- *    if (validation.ok) {
- *      // student data is valid!
- *    }
+ *class PersonValidation extends Validation<
+ *| 'NAME_EXISTS'
+ *| 'NAME_IS_VALID'
+ *| 'AGE_EXISTS'
+ *| 'AGE_IS_POSITIVE'
+ *> {
+ *  constructor(person: Person) {
+ *    super(validator =>
+ *      validator
+ *        .object(person)
+ *        .then(({ name, age }) => {
+ *          validator
+ *            .check('NAME_EXISTS', !!name, 'Name is required.')
+ *            .check('NAME_IS_VALID', () => name.length >= 3, 'Name is invalid.');
+ *          validator
+ *            .check('AGE_EXISTS', age !== undefined, 'Age is required.')
+ *            .check('AGE_IS_POSITIVE', () => age >= 0, 'Age can not be negative.');
+ *        })
+ *    );
+ *  }
+ *}
  *
+ *const person: Person = {
+ *  name: 'Hessamoddin',
+ *  age: 34
+ *};
+ *
+ *const validation = new PersonValidation(person);
+ *
+ *if (validation.ok) {
+ *  // person data is valid.
+ *}
+ *```
  */
 export default abstract class Validation<Badge extends string = string, $ extends $Base = {}> implements ValidationDescribed {
   readonly ok?: boolean;
@@ -63,39 +80,59 @@ export default abstract class Validation<Badge extends string = string, $ extend
    * --------------------------------
    * Example:
    *
-   *    Validation.defaultBadgeFailureMessages = {
-   *      NAME_IS_VALID: 'Name is invalid.',
-   *      '*_IS_VALID': 'This field is invalid.',
-   *      'NAME_*': 'Name has a problem.',
-   *      '*': 'The form data is not acceptable.'
-   *    };
+   *```typescript
+   *Validation.defaultBadgeFailureMessages = {
+   *  NAME_IS_VALID: 'Name is invalid.',
+   *  '*_IS_VALID': 'This field is invalid.',
+   *  'NAME_*': 'Name has a problem.',
+   *  '*': 'The form data is not acceptable.'
+   *};
+   *```
    */
   static defaultBadgeFailureMessages: BadgeFailureMessages = {};
 
   private readonly internal!: Internal<Badge, $>;
 
   /**
-   * Defines the validation and how to validate data.
+   * Defines the validation; in other words, how to validate.
    *
    * --------------------------------
    * Example:
    *
-   *    class DataValidation extends Validation<...> {
-   *      constructor(data: Data) {
-   *        super((validator, validation) => {
-   *          // validate the data
-   *        }, {
-   *          // default error messages
-   *        });
-   *      }
-   *    }
+   *```typescript
+   *class DataValidation extends Validation {
+   *  constructor(data: Data, previousDataValidation?: DataValidation) {
    *
+   *    // Only validate data:
+   *    super(validator => {... validate the data ...});
+   *
+   *    // Validate data based on the previous validation:
+   *    super(
+   *      validator => {... validate the data ...},
+   *      previousDataValidation
+   *    );
+   *
+   *    // Validate data using a predefined badgeFailureMessages:
+   *    super(
+   *      validator => {... validate the data ...},
+   *      badgeFailureMessages
+   *    );
+   *
+   *    // Validate data based on the previous validation using a predefined badgeFailureMessages:
+   *    super(
+   *      validator => {... validate the data ...},
+   *      previousDataValidation,
+   *      badgeFailureMessages
+   *    );
+   *
+   *  }
+   *}
+   *```
    * --------------------------------
-   * @param validate The validation body to validate data.
-   *                 The `validator` parameter is used to validate data and
-   *                 the `validation` parameter refers to this validation object itself.
-   * @param badgeFailureMessages Optional, the default error messages for failed badge of this validation.
-   * @see `badgeFailureMessages` property.
+   * @param validate The validation body to validate data. Provides the `validator` parameter to be used to validate data.
+   * @param previousValidation Optional, the previous instance of the validation.
+   * @param badgeFailureMessages Optional, the default error messages for the failed badges of this validation.
+   * @see `Validation.defaultBadgeFailureMessages` static property.
    */
   protected constructor(validate: (validator: ValidatorSeed<Badge, $>) => void, badgeFailureMessages?: BadgeFailureMessages);
   protected constructor(
