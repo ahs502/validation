@@ -207,9 +207,9 @@ export default abstract class Validation<Badge extends string = string, $ extend
     throw new Error(defaultMessage || '');
   }
 
-  dispose(message: string = 'disposed'): void {
+  dispose(reason: any = 'disposed'): void {
     if (this.internal.done) return;
     this.internal.done = true;
-    this.internal.reject(message);
+    this.internal.reject(reason);
   }
 }
