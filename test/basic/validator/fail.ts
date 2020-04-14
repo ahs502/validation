@@ -45,13 +45,13 @@ describe('Validator', () => {
           validation.throw();
           throw 'Test failed.';
         } catch (error) {
-          expect(error).toBe('');
+          expect(error && error.message).toBe('');
         }
         try {
           validation.throw('Something!');
           throw 'Test failed.';
         } catch (error) {
-          expect(error).toBe('Something!');
+          expect(error && error.message).toBe('Something!');
         }
       });
 
@@ -132,13 +132,13 @@ describe('Validator', () => {
           validation.throw();
           throw 'Test failed.';
         } catch (error) {
-          expect(error).toBe('');
+          expect(error && error.message).toBe('');
         }
         try {
           validation.throw('Something!');
           throw 'Test failed.';
         } catch (error) {
-          expect(error).toBe('Something!');
+          expect(error && error.message).toBe('Something!');
         }
       });
 
