@@ -99,6 +99,12 @@ v3.messages()   // ['The point is out of range.']
 $ npm install @ahs502/validation
 ```
 
+## Documentation
+
+A detailed API documentation plus tutorials and examples is
+being developed at the time. The link will be shared here as
+soon as possible. Thanks for being patient.
+
 ## Development
 
 Run tests (Powered by _jest_):
