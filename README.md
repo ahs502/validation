@@ -1,6 +1,6 @@
 # @ahs502/validation
 
-#### A universal client/server side data validation for complex data structures.
+#### A universal client/server side data model validation.
 
 Have you ever struggled validating forms with _complex_ and _dynamic_ data structures?
 
@@ -25,10 +25,17 @@ If the answer is **_yes_**, then `@ahs502/validation` system is here to save the
 ```typescript
 import Validation from '@ahs502/validation'
 
-// JavaScript:
+// TypeScript:
 
-class PointValidation extends Validation {
-  constructor({ x, y }, range) {
+interface Point {
+  x: number
+  y: number
+}
+
+class PointValidation extends Validation<
+  'X_IS_VALID' | 'Y_IS_VALID' | 'IS_WITHIN_RANGE'
+> {
+  constructor({ x, y }: Point, range: number) {
     super(validator => {
       validator.check('X_IS_VALID', !isNaN(x), 'x is invalid.')
       validator.check('Y_IS_VALID', !isNaN(y), 'y is invalid.')
@@ -43,17 +50,10 @@ class PointValidation extends Validation {
   }
 }
 
-// TypeScript:
+// JavaScript:
 
-interface Point {
-  x: number
-  y: number
-}
-
-class PointValidation extends Validation<
-  'X_IS_VALID' | 'Y_IS_VALID' | 'IS_WITHIN_RANGE'
-> {
-  constructor({ x, y }: Point, range: number) {
+class PointValidation extends Validation {
+  constructor({ x, y }, range) {
     super(validator => {
       validator.check('X_IS_VALID', !isNaN(x), 'x is invalid.')
       validator.check('Y_IS_VALID', !isNaN(y), 'y is invalid.')
@@ -101,9 +101,7 @@ $ npm install @ahs502/validation
 
 ## Documentation
 
-A detailed API documentation plus tutorials and examples is
-being developed at the time. The link will be shared here as
-soon as possible. Thanks for being patient.
+The [documentation](https://ahs502.ir/validation/) contains tutorials, examples and API documentation.
 
 ## Development
 
@@ -119,7 +117,7 @@ Build the project into the `dist` folder:
 $ npm run build
 ```
 
-> It is preferred to develop this project by _VS Code_ with _Prettier_ extension installed.
+> It's recommended to use _VS Code_ IDE with _Prettier_ extension installed.
 
 ## Contribution
 

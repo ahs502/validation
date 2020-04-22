@@ -1,7 +1,7 @@
 {
   "name": "@ahs502/validation",
   "version": "4.1.3",
-  "description": "A universal client and server side data model validation.",
+  "description": "A universal client/server side data model validation.",
   "main": "dist/Validation.js",
   "types": "dist/Validation.d.ts",
   "private": false,
@@ -27,7 +27,7 @@
   "bugs": {
     "url": "https://github.com/ahs502/validation/issues"
   },
-  "homepage": "https://github.com/ahs502/validation#readme",
+  "homepage": "https://ahs502.ir/validation/",
   "files": [
     "dist/**/*"
   ],
