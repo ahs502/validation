@@ -1,6 +1,6 @@
 {
   "name": "@ahs502/validation",
-  "version": "4.1.4",
+  "version": "4.1.5",
   "description": "A universal client/server side data model validation.",
   "main": "dist/Validation.js",
   "types": "dist/Validation.d.ts",
