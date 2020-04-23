@@ -22,11 +22,15 @@ If the answer is **_yes_**, then `@ahs502/validation` system is here to save the
 - Capability to apply **complex logics** and **arbitrary orders** to check everything
 - **Easy** to learn, **enjoyful** to implement
 
+All you need to import is:
+
 ```typescript
 import Validation from '@ahs502/validation'
+```
 
-// TypeScript:
+In **TypeScript**:
 
+```typescript
 interface Point {
   x: number
   y: number
@@ -49,9 +53,11 @@ class PointValidation extends Validation<
     })
   }
 }
+```
 
-// JavaScript:
+Or, in **JavaScript**:
 
+```javascript
 class PointValidation extends Validation {
   constructor({ x, y }, range) {
     super(validator => {
@@ -67,30 +73,35 @@ class PointValidation extends Validation {
     })
   }
 }
+```
 
-// Usage:
+The usage is like:
 
+```typescript
 const p1 = { x: 1, y: 2 }
 const v1 = new PointValidation(p1, 10)
 v1.ok           // true
 v1.badges       // ['X_IS_VALID', 'Y_IS_VALID', 'IS_WITHIN_RANGE']
 v1.failedBadges // []
 v1.messages()   // []
+```
 
+```typescript
 const p2 = { x: -3, y: NaN }
 const v2 = new PointValidation(p2, 10)
 v2.ok           // false
 v2.badges       // ['X_IS_VALID']
 v2.failedBadges // ['Y_IS_VALID']
 v2.messages()   // ['y is invalid.']
+```
 
+```typescript
 const p3 = { x: 100, y: 100 }
 const v3 = new PointValidation(p3, 10)
 v3.ok           // false
 v3.badges       // ['X_IS_VALID', 'Y_IS_VALID']
 v3.failedBadges // ['IS_WITHIN_RANGE']
 v3.messages()   // ['The point is out of range.']
-
 ```
 
 ## Installation
@@ -101,7 +112,7 @@ $ npm install @ahs502/validation
 
 ## Documentation
 
-The [documentation](https://ahs502.ir/validation/) contains tutorials, examples and API documentation.
+This [documentation](https://ahs502.ir/validation/) contains tutorials, examples and API details.
 
 ## Development
 
